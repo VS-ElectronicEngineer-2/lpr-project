@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>License Plate Recognition Dashboard</title>
+    <style>
+        /* Base Styling */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            color: #333;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #0A73B7;
+            padding: 10px;
+        }
+
+        h1 {
+            color: white;
+            font-size: 24px;
+            text-align: center;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        /* Video Stream Section */
+        .video-section {
+            width: 100%;
+            text-align: center;
+        }
+
+        .stream {
+            width: 100%;
+            max-width: 900px;
+            height: 450px;
+            /* Increased height */
+            border: 3px solid #0A73B7;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .controls {
+            margin: 10px 0;
+            text-align: center;
+        }
+
+        .controls button {
+            margin: 5px;
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            color: white;
+        }
+
+        .controls button.start {
+            background-color: #4CAF50;
+        }
+
+        .controls button.stop {
+            background-color: #f44336;
+        }
+
+        /* Table Section (Side by Side Layout) */
+        .tables-container {
+            display: flex;
+            gap: 20px;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+
+        .table-section {
+            flex: 1;
+            width: 100%;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background-color: white;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        th,
+        td {
+            text-align: center;
+            padding: 10px;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #0A73B7;
+            color: white;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        tr:nth-child(odd) {
+            background-color: #fff;
+        }
+
+        .status-paid {
+            color: green;
+            font-weight: bold;
+        }
+
+        .status-not-paid {
+            color: red;
+            font-weight: bold;
+        }
+
+        img {
+            max-width: 100px;
+            height: auto;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        footer {
+            margin-top: 20px;
+            padding: 10px 0;
+            text-align: center;
+            background-color: #0A73B7;
+            color: white;
+        }
+
+        @media (max-width: 768px) {
+            .tables-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <img src="{{ url_for('static', filename='vista-logo.png') }}" alt="Vista Logo"
+            style="height: 40px; margin-right: 10px;">
+        <h1>License Plate Recognition Dashboard</h1>
+        <a href="/logout" style="float: right; margin-right: 20px; color: white; font-size: 16px;">Logout</a>
+    </header>
+
+    <div class="container">
+        <!-- Video Stream Section -->
+        <div class="video-section">
+            <h2>Live Stream</h2>
+            <div class="controls">
+                <button class="start" onclick="startStream()">Start</button>
+                <button class="stop" onclick="stopStream()">Stop</button>
+            </div>
+            <img id="videoStream" src="" alt="Video Stream" class="stream">
+        </div>
+
+        <!-- Tables Section (Side by Side) -->
+        <div class="tables-container">
+            <!-- Detected Plates Table -->
+            <div class="table-section">
+                <h2>Detected Plates</h2>
+                <button onclick="downloadExcel('detected_plates')">Download Excel</button>
+                <button onclick="downloadPDF('detected_plates')">Download PDF</button>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>License Plate</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                            <th>Snapshot</th>
+                        </tr>
+                    </thead>
+                    <tbody id="plate-table">
+                        <!-- Dynamic rows will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Summons Queue Table -->
+            <div class="table-section">
+                <h2>Summons Queue</h2>
+                <button onclick="downloadExcel('summons_queue')">Download Excel</button>
+                <button onclick="downloadPDF('summons_queue')">Download PDF</button>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>License Plate</th>
+                            <th>Notice No</th>
+                            <th>Offence</th>
+                            <th>Location</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                            <th>Fine Amount</th>
+                            <th>Due Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="summons-table">
+                        <!-- Summons data will be inserted here dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        © 2025 License Plate Recognition System
+    </footer>
+
+    <script>
+        const videoStream = document.getElementById("videoStream");
+
+        function startStream() {
+            videoStream.src = "/video_feed";
+            videoStream.style.display = "block";
+        }
+
+        function stopStream() {
+            videoStream.src = "";
+            videoStream.style.display = "none";
+        }
+
+        function downloadExcel(type) {
+            window.location.href = `/download/excel/${type}`;
+        }
+
+        function downloadPDF(type) {
+            window.location.href = `/download/pdf/${type}`;
+
+        }
+
+        async function fetchPlates() {
+            try {
+                const response = await fetch("/plates");
+                const data = await response.json();
+                const table = document.getElementById("plate-table");
+                table.innerHTML = ""; // Clear previous rows before updating
+
+                data.forEach((plate) => {
+                    const statusClass = plate.status === "Not Paid" ? "status-not-paid" : "status-paid";
+                    const row = `
+            <tr>
+                <td>${plate.plate}</td>
+                <td class="${statusClass}">${plate.status}</td>
+                <td>${plate.time}</td>
+                <td><img src="${plate.snapshot}" alt="Snapshot"></td>
+            </tr>
+            `;
+                    table.innerHTML += row; // Append new row at the top
+                });
+            } catch (error) {
+                console.error("Error fetching plates:", error);
+            }
+        }
+
+        async function fetchSummons() {
+            try {
+                const response = await fetch("/summons");
+                const summonsData = await response.json();
+                const table = document.getElementById("summons-table");
+
+                table.innerHTML = ""; // Clear previous rows before updating
+
+                if (summonsData.length === 0) {
+                    table.innerHTML = "<tr><td colspan='8'>No summons found</td></tr>";
+                    return;
+                }
+
+                summonsData.forEach((summons) => {
+                    const row = `
+            <tr>
+                <td>${summons.plate}</td>
+                <td>${summons.noticeNo}</td>
+                <td>${summons.offence}</td>
+                <td>${summons.location}</td>
+                <td>${summons.date}</td>
+                <td>${summons.status}</td>
+                <td>${summons.amount}</td>
+                <td>${summons.due_date}</td>
+            </tr>
+        `;
+                    table.innerHTML += row; // Append new row at the top
+                });
+            } catch (error) {
+                console.error("Error fetching summons:", error);
+            }
+        }
+
+        setInterval(() => {
+            fetchPlates();
+            fetchSummons();
+        }, 5000);
+
+        fetchPlates();
+        fetchSummons();
+    </script>
+
+</body>
+
+</html>
