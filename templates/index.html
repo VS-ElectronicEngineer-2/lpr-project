@@ -5,6 +5,25 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>License Plate Recognition Dashboard</title>
+
+    <!-- Leaflet CSS (Required for Map) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+
+    <style>
+        /* 🌍 Map Styling */
+        #map {
+            height: 400px;
+            /* Set map height */
+            width: 100%;
+            /* Full width */
+            border-radius: 10px;
+            margin-top: 10px;
+        }
+    </style>
+
+    <!-- Leaflet JS (Required for Map) -->
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
     <style>
         /* Base Styling */
         * {
@@ -42,17 +61,25 @@
             border-radius: 10px;
         }
 
-        /* Video Stream Section */
-        .video-section {
+        /* Centering Live Stream Section */
+        .video-stream-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
             width: 100%;
+            margin-top: 20px;
+        }
+
+        .video-section {
             text-align: center;
+            width: 100%;
+            max-width: 900px;
         }
 
         .stream {
             width: 100%;
             max-width: 900px;
             height: 450px;
-            /* Increased height */
             border: 3px solid #0A73B7;
             border-radius: 10px;
             display: none;
@@ -165,7 +192,18 @@
     </header>
 
     <div class="container">
-        <!-- Video Stream Section -->
+        <h2>🚗 Live Vehicle Tracking</h2>
+        <div id="vehicle-tracking">
+            <p>Loading GPS data...</p>
+        </div>
+
+        <!-- 🌍 Map Display -->
+        <div id="map"></div>
+    </div>
+
+
+    <!-- Video Stream Section (Centered) -->
+    <div class="video-stream-container">
         <div class="video-section">
             <h2>Live Stream</h2>
             <div class="controls">
@@ -174,53 +212,54 @@
             </div>
             <img id="videoStream" src="" alt="Video Stream" class="stream">
         </div>
+    </div>
 
-        <!-- Tables Section (Side by Side) -->
-        <div class="tables-container">
-            <!-- Detected Plates Table -->
-            <div class="table-section">
-                <h2>Detected Plates</h2>
-                <button onclick="downloadExcel('detected_plates')">Download Excel</button>
-                <button onclick="downloadPDF('detected_plates')">Download PDF</button>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>License Plate</th>
-                            <th>Status</th>
-                            <th>Time</th>
-                            <th>Snapshot</th>
-                        </tr>
-                    </thead>
-                    <tbody id="plate-table">
-                        <!-- Dynamic rows will be inserted here -->
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Summons Queue Table -->
-            <div class="table-section">
-                <h2>Summons Queue</h2>
-                <button onclick="downloadExcel('summons_queue')">Download Excel</button>
-                <button onclick="downloadPDF('summons_queue')">Download PDF</button>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>License Plate</th>
-                            <th>Notice No</th>
-                            <th>Offence</th>
-                            <th>Location</th>
-                            <th>Date</th>
-                            <th>Status</th>
-                            <th>Fine Amount</th>
-                            <th>Due Date</th>
-                        </tr>
-                    </thead>
-                    <tbody id="summons-table">
-                        <!-- Summons data will be inserted here dynamically -->
-                    </tbody>
-                </table>
-            </div>
+    <!-- Tables Section (Side by Side) -->
+    <div class="tables-container">
+        <!-- Detected Plates Table -->
+        <div class="table-section">
+            <h2>Detected Plates</h2>
+            <button onclick="downloadExcel('detected_plates')">Download Excel</button>
+            <button onclick="downloadPDF('detected_plates')">Download PDF</button>
+            <table>
+                <thead>
+                    <tr>
+                        <th>License Plate</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                        <th>Snapshot</th>
+                    </tr>
+                </thead>
+                <tbody id="plate-table">
+                    <!-- Dynamic rows will be inserted here -->
+                </tbody>
+            </table>
         </div>
+
+        <!-- Summons Queue Table -->
+        <div class="table-section">
+            <h2>Summons Queue</h2>
+            <button onclick="downloadExcel('summons_queue')">Download Excel</button>
+            <button onclick="downloadPDF('summons_queue')">Download PDF</button>
+            <table>
+                <thead>
+                    <tr>
+                        <th>License Plate</th>
+                        <th>Notice No</th>
+                        <th>Offence</th>
+                        <th>Location</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Fine Amount</th>
+                        <th>Due Date</th>
+                    </tr>
+                </thead>
+                <tbody id="summons-table">
+                    <!-- Summons data will be inserted here dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
     </div>
 
     <footer>
@@ -313,6 +352,50 @@
 
         fetchPlates();
         fetchSummons();
+
+        // 🌍 Initialize the map
+        var map = L.map('map').setView([3.20785486, 101.779788197], 16); // Default starting location
+
+        // 📌 Add OpenStreetMap tile layer
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // 🚗 Marker for vehicle position
+        var marker = L.marker([3.20785486, 101.779788197]).addTo(map);
+
+        // 🔄 Function to Update GPS Data and Map
+        function updateGPS() {
+            fetch('/api/gps/logs') // Fetch latest GPS logs
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length > 0) {
+                        var latestData = data[data.length - 1]; // Get last received GPS data
+                        var lat = latestData.latitude;
+                        var lon = latestData.longitude;
+
+                        // 🏎 Update Marker Position
+                        marker.setLatLng([lat, lon]); // Move marker
+                        map.setView([lat, lon], 16); // Center map to vehicle
+
+                        // 📝 Update Tracking Panel
+                        document.getElementById("vehicle-tracking").innerHTML = `
+                    <b>Latitude:</b> ${lat} <br>
+                    <b>Longitude:</b> ${lon} <br>
+                    <b>Speed:</b> ${latestData.speed} km/h <br>
+                    <b>Start Time:</b> ${latestData.start_time} <br>
+                    <b>Idle Time:</b> ${latestData.idle_time || "N/A"} <br>
+                    <b>End Time:</b> ${latestData.end_time ? latestData.end_time : "<span style='color:red;'>Still Tracking...</span>"}
+                `;
+                    }
+                })
+                .catch(error => console.error("Failed to fetch GPS data:", error));
+        }
+
+
+        // 🔄 Refresh GPS Data Every 5 Seconds
+        setInterval(updateGPS, 5000);
+
     </script>
 
 </body>

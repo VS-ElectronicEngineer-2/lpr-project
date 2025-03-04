@@ -32,7 +32,7 @@ if not os.path.exists(app.config["SNAPSHOT_FOLDER"]):
 PLATE_RECOGNIZER_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
 PARKING_API_URL = "https://mycouncil.citycarpark.my/parking/ctcp/services-listerner_mbk.php"
 NODE_API_URL = "http://localhost:5000/api/summons"
-API_TOKEN = "31dec082ba6a3f72b16236de19f32d1559d743c9"
+API_TOKEN = "18cc09bdb0d72b43759a67ad9984a81ad2d153f0"
 PARKING_API_ACTION = "GetParkingRightByPlateVerify"
 
 detected_plates = []
@@ -364,6 +364,23 @@ def download_summons_queue_pdf():
         buffer.seek(0)
 
         return send_file(buffer, mimetype="application/pdf", as_attachment=True, download_name="summons_queue.pdf")
+        
+gps_data_log = []  # Store GPS data temporarily
+
+@app.route("/api/gps", methods=["POST"])
+def receive_gps_data():
+    global gps_data_log
+    data = request.json
+    if data:
+        gps_data_log.append(data)
+        print(f"📡 Received GPS Data: {data}")  # Debugging output
+        return jsonify({"status": "success"}), 200
+    return jsonify({"error": "No data received"}), 400
+
+@app.route("/api/gps/logs", methods=["GET"])
+def get_gps_logs():
+    return jsonify(gps_data_log)  # Return logged GPS data
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=False)
