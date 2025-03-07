@@ -19,6 +19,35 @@
             border-radius: 10px;
             margin-top: 10px;
         }
+
+        /* Custom Popup Styling */
+        .custom-popup {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            max-width: 250px;
+            padding: 10px;
+            border-radius: 10px;
+            color: white;
+            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Dynamic Popup Background Colors */
+        .popup-red {
+            background-color: red !important;
+        }
+
+        .popup-green {
+            background-color: green !important;
+        }
+
+        .popup-blue {
+            background-color: blue !important;
+        }
+
+        /* Customizing the popup tip (arrow) */
+        .leaflet-popup-tip {
+            background: inherit !important;
+        }
     </style>
 
     <!-- Leaflet JS (Required for Map) -->
@@ -193,14 +222,10 @@
 
     <div class="container">
         <h2>🚗 Live Vehicle Tracking</h2>
-        <div id="vehicle-tracking">
-            <p>Loading GPS data...</p>
-        </div>
-
-        <!-- 🌍 Map Display -->
         <div id="map"></div>
     </div>
 
+    <!-- Remove the duplicate map div -->
 
     <!-- Video Stream Section (Centered) -->
     <div class="video-stream-container">
@@ -227,6 +252,8 @@
                         <th>License Plate</th>
                         <th>Status</th>
                         <th>Time</th>
+                        <th>Latitude</th> <!-- ✅ Add Latitude Column -->
+                        <th>Longitude</th> <!-- ✅ Add Longitude Column -->
                         <th>Snapshot</th>
                     </tr>
                 </thead>
@@ -297,11 +324,18 @@
 
                 data.forEach((plate) => {
                     const statusClass = plate.status === "Not Paid" ? "status-not-paid" : "status-paid";
+
+                    // ✅ Handle missing GPS data
+                    const latitude = plate.latitude ? plate.latitude.toFixed(6) : "N/A";
+                    const longitude = plate.longitude ? plate.longitude.toFixed(6) : "N/A";
+
                     const row = `
             <tr>
                 <td>${plate.plate}</td>
                 <td class="${statusClass}">${plate.status}</td>
                 <td>${plate.time}</td>
+                <td>${latitude}</td> <!-- ✅ Show Latitude -->
+                <td>${longitude}</td> <!-- ✅ Show Longitude -->
                 <td><img src="${plate.snapshot}" alt="Snapshot"></td>
             </tr>
             `;
@@ -361,40 +395,148 @@
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // 🚗 Marker for vehicle position
-        var marker = L.marker([3.20785486, 101.779788197]).addTo(map);
+        // 📍 Define Custom Icons for Different Statuses
+        const redIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        const greenIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
+
+        const blueIcon = L.icon({
+            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+            iconSize: [25, 41],
+            iconAnchor: [12, 41],
+            popupAnchor: [1, -34],
+            shadowSize: [41, 41]
+        });
 
         // 🔄 Function to Update GPS Data and Map
         function updateGPS() {
-            fetch('/api/gps/logs') // Fetch latest GPS logs
+            fetch('/plates')
                 .then(response => response.json())
-                .then(data => {
-                    if (data.length > 0) {
-                        var latestData = data[data.length - 1]; // Get last received GPS data
-                        var lat = latestData.latitude;
-                        var lon = latestData.longitude;
+                .then(plateData => {
+                    fetch('/summons') // Get summons queue
+                        .then(response => response.json())
+                        .then(summonsData => {
+                            // ✅ Remove old markers before adding new ones
+                            map.eachLayer((layer) => {
+                                if (layer instanceof L.Marker) {
+                                    map.removeLayer(layer);
+                                }
+                            });
 
-                        // 🏎 Update Marker Position
-                        marker.setLatLng([lat, lon]); // Move marker
-                        map.setView([lat, lon], 16); // Center map to vehicle
+                            plateData.forEach((plate) => {
+                                if (plate.latitude && plate.longitude) {
+                                    const lat = plate.latitude;
+                                    const lon = plate.longitude;
+                                    const plateNumber = plate.plate;
+                                    const status = plate.status;
+                                    const time = plate.time;
+                                    const snapshot = plate.snapshot;
+                                    const officerId = plate.officer_id || "Unknown"; // ✅ Get Officer ID (Ensure fallback if undefined)
 
-                        // 📝 Update Tracking Panel
-                        document.getElementById("vehicle-tracking").innerHTML = `
-                    <b>Latitude:</b> ${lat} <br>
-                    <b>Longitude:</b> ${lon} <br>
-                    <b>Speed:</b> ${latestData.speed} km/h <br>
-                    <b>Start Time:</b> ${latestData.start_time} <br>
-                    <b>Idle Time:</b> ${latestData.idle_time || "N/A"} <br>
-                    <b>End Time:</b> ${latestData.end_time ? latestData.end_time : "<span style='color:red;'>Still Tracking...</span>"}
-                `;
-                    }
+                                    // 🔍 Check if this plate exists in the summons queue
+                                    let hasSummons = summonsData.some(summon => summon.plate === plateNumber);
+
+                                    // 🟢 Assign Marker Color Based on Status
+                                    let markerIcon = redIcon; // Default: Not Paid (Red)
+                                    if (status.toLowerCase().startsWith("paid")) {
+                                        markerIcon = greenIcon; // Paid (Green)
+                                    }
+                                    if (hasSummons) {
+                                        markerIcon = blueIcon; // Summons (Blue)
+                                    }
+
+                                    // Determine background color based on status
+                                    let popupBackgroundColor = "red"; // Default: Not Paid (Red)
+                                    if (status.toLowerCase().includes("paid")) {
+                                        popupBackgroundColor = "green"; // Paid (Green)
+                                    } else if (hasSummons) {
+                                        popupBackgroundColor = "blue"; // Summons (Blue)
+                                    }
+
+
+                                    // 📌 Add marker with properly styled pop-up
+                                    L.marker([lat, lon], { icon: markerIcon })
+                                        .addTo(map)
+                                        .bindPopup(`
+                                            <div style="
+                                                font-family: Arial, sans-serif;
+                                                text-align: center; 
+                                                max-width: 250px; 
+                                                padding: 10px; 
+                                                border-radius: 10px; 
+                                                background-color: ${popupBackgroundColor}; 
+                                                color: white; 
+                                                box-shadow: 2px 2px 10px rgba(0,0,0,0.3);">
+            
+                                                <h3 style="margin: 5px 0; font-size: 18px; font-weight: bold; text-transform: uppercase;">${plateNumber}</h3>
+                                                <p style="margin: 3px 0;"><b>Status:</b> <span style="color: white;">${status}</span></p>
+                                                <p style="margin: 3px 0;"><b>Time:</b> ${time}</p>
+                                                <p style="margin: 3px 0;"><b>Officer ID:</b> ${officerId}</p>
+                                                <div style="display: flex; justify-content: center; margin-top: 5px;">
+                                                    <img src="${snapshot}" width="220px" height="140px" 
+                                                         style="border: 2px solid white; border-radius: 10px;">
+                                                </div>
+                                            </div>
+                                        `, { className: 'custom-popup' }); // 👈 Important: Use a custom class
+
+                                }
+                            });
+
+                            // ✅ Add Summons Queue Markers (Blue)
+                            summonsData.forEach((summon) => {
+                                if (summon.latitude && summon.longitude) {
+                                    const lat = summon.latitude;
+                                    const lon = summon.longitude;
+                                    const plateNumber = summon.plate;
+                                    const noticeNo = summon.noticeNo;
+                                    const offence = summon.offence;
+                                    const location = summon.location;
+                                    const date = summon.date;
+                                    const amount = summon.amount;
+                                    const snapshot = summon.snapshot; // ✅ Get Snapshot
+
+                                    // 📌 Add Summons Marker (Blue)
+                                    L.marker([lat, lon], { icon: blueIcon })
+                                        .addTo(map)
+                                        .bindPopup(`
+                                    <b>Summons for Plate:</b> ${plateNumber} <br>
+                                    <b>Notice No:</b> ${noticeNo} <br>
+                                    <b>Offence:</b> ${offence} <br>
+                                    <b>Location:</b> ${location} <br>
+                                    <b>Date:</b> ${date} <br>
+                                    <b>Fine Amount:</b> ${amount} <br>
+                                    <b>Officer ID:</b> ${summon.officer_id || "Unknown"} <br> <!-- ✅ Show officer ID -->
+                                    <img src="${snapshot}" width="100px" height="70px">
+                                `);
+                                }
+                            });
+
+                        })
+                        .catch(error => console.error("Failed to fetch summons queue data:", error));
                 })
-                .catch(error => console.error("Failed to fetch GPS data:", error));
+                .catch(error => console.error("Failed to fetch detected plate GPS data:", error));
         }
 
+        // 🔄 Refresh map every 10 seconds
+        setInterval(updateGPS, 10000);
 
-        // 🔄 Refresh GPS Data Every 5 Seconds
-        setInterval(updateGPS, 5000);
+        // ✅ Call updateGPS() once when the page loads
+        document.addEventListener("DOMContentLoaded", updateGPS);
 
     </script>
 

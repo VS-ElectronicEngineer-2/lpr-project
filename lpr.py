@@ -8,6 +8,7 @@ import requests
 from queue import Queue
 import pandas as pd
 from io import BytesIO
+import gps
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph, Image
@@ -18,10 +19,11 @@ from reportlab.lib.styles import getSampleStyleSheet
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # Change this to a secure key
 
-# User credentials (Replace with a database in production)
+# ✅ Dummy User Database (Replace with actual database in production)
 USERS = {
-    "admin": "password123",
-    "user": "lprsystem"
+    "admin": {"password": "password123", "officer_id": "111111"},
+    "user1": {"password": "lprsystem", "officer_id": "222222"},
+    "user2": {"password": "test123", "officer_id": "333333"}
 }
 
 app.config["SNAPSHOT_FOLDER"] = "static/snapshots"
@@ -32,13 +34,15 @@ if not os.path.exists(app.config["SNAPSHOT_FOLDER"]):
 PLATE_RECOGNIZER_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
 PARKING_API_URL = "https://mycouncil.citycarpark.my/parking/ctcp/services-listerner_mbk.php"
 NODE_API_URL = "http://localhost:5000/api/summons"
-API_TOKEN = "18cc09bdb0d72b43759a67ad9984a81ad2d153f0"
+API_TOKEN = "2efeaf865ffeaf89980d83a7fc05f1117466a5e6"
 PARKING_API_ACTION = "GetParkingRightByPlateVerify"
 
 detected_plates = []
 summons_data = []  # Store fetched summons data globally
 lock = threading.Lock()
 frame_queue = Queue(maxsize=1)  # Increased queue size
+gps_logs = []  # ✅ Store latest GPS readings
+stored_officer_id = "Unknown"  # ✅ Store officer ID globally
 
 # API Throttler
 class Throttler:
@@ -56,7 +60,7 @@ class Throttler:
             time.sleep(self.interval - (now - self.timestamps[0]))
         self.timestamps.append(now)
 
-throttler = Throttler(rate_limit=8, interval=1)  # 8 API calls per second
+throttler = Throttler(rate_limit=1, interval=1)  # 8 API calls per second
 
 # Initialize camera
 try:
@@ -72,41 +76,63 @@ except Exception as e:
 # Authentication Routes
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    global stored_officer_id
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
-        if username in USERS and USERS[username] == password:
+
+        if username in USERS and USERS[username]["password"] == password:
             session["user"] = username
-            return redirect(url_for("dashboard"))
+            session["officer_id"] = USERS[username]["officer_id"]
+            stored_officer_id = USERS[username]["officer_id"]  # ✅ Store globally
+            return redirect("/")
         else:
             return render_template("login.html", error="Invalid username or password.")
+
     return render_template("login.html")
 
-@app.route("/logout")
+@app.route("/logout")  # ✅ Ensure logout function is correctly defined
 def logout():
+    global stored_officer_id
     session.pop("user", None)
-    return redirect(url_for("login"))
+    session.pop("officer_id", None)
+    stored_officer_id = "Unknown"  # ✅ Reset on logout
+    return redirect("/login")
 
 @app.route("/")
 def dashboard():
-    if "user" not in session:
+    if "user" not in session:  # ✅ If user is not logged in, redirect to login page
         return redirect(url_for("login"))
-    return render_template("index.html")
+    return render_template("index.html")  # ✅ If logged in, show the dashboard
 
 # License Plate Recognition
 def recognize_plate(frame):
-    throttler.wait()  # Apply API throttling
+    throttler.wait()
+
     try:
-        _, img_encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 70])  # Reduce quality
+        _, img_encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])  # ✅ Reduce quality for faster upload
+        img_bytes = img_encoded.tobytes()  # ✅ Convert image to bytes
+
+        print("📤 Sending image to Plate Recognizer API...")
+
         response = requests.post(
             PLATE_RECOGNIZER_API_URL,
-            files={"upload": ("image.jpg", img_encoded.tobytes(), "image/jpeg")},
+            files={"upload": ("image.jpg", img_bytes, "image/jpeg")},  # ✅ Correct image upload
             headers={"Authorization": f"Token {API_TOKEN}"},
-            timeout=5
+            timeout=15  # ✅ Increased timeout
         )
-        return response.json().get("results", []) if response.status_code == 201 else []
+
+        print(f"📥 API Response Code: {response.status_code}")
+        print(f"📥 API Response Data: {response.text}")
+
+        if response.status_code == 201:
+            return response.json().get("results", [])
+
+        print("⚠️ Plate Recognizer API did not return a plate.")
+        return []
+
     except requests.exceptions.RequestException as e:
-        print(f"Plate recognition failed: {e}")
+        print(f"⚠️ Plate recognition request failed: {e}")
         return []
 
 def check_parking_status(plate_number):
@@ -141,6 +167,8 @@ def check_summons_status(plate_number):
 
 # Process frames asynchronously
 def process_frames():
+    global stored_officer_id  # ✅ Use the global officer ID
+
     while True:
         if not frame_queue.empty():
             frame = frame_queue.get()
@@ -158,6 +186,16 @@ def process_frames():
                 snapshot_path = os.path.join(app.config["SNAPSHOT_FOLDER"], snapshot_name)
                 cv2.imwrite(snapshot_path, frame)
 
+                # ✅ Get latest GPS data
+                latitude, longitude = None, None
+                if gps_logs:
+                    latest_gps = gps_logs[-1]  # Get last received GPS log
+                    latitude = latest_gps.get("latitude")
+                    longitude = latest_gps.get("longitude")
+
+                # ✅ Use global officer ID instead of session
+                officer_id = stored_officer_id
+
                 parking_status = check_parking_status(plate_number)
                 summons_status = check_summons_status(plate_number)
 
@@ -167,7 +205,10 @@ def process_frames():
                         "status": parking_status,
                         "summons": summons_status,
                         "time": timestamp,
-                        "snapshot": snapshot_path
+                        "snapshot": snapshot_path,
+                        "latitude": latitude,  # ✅ Include GPS data
+                        "longitude": longitude,  # ✅ Include GPS data
+                        "officer_id": officer_id # ✅ Include Officer ID
                     })
 
 threading.Thread(target=process_frames, daemon=True).start()
@@ -206,11 +247,22 @@ def video_feed():
 @app.route("/plates", methods=["GET"])
 def plates():
     with lock:
+        for plate in detected_plates:
+            if "officer_id" not in plate:
+                plate["officer_id"] = stored_officer_id  # ✅ Ensure officer_id is present
         return jsonify(list(reversed(detected_plates)))  # Reverse order to show latest first
+
+@app.route("/api/user", methods=["GET"])
+def get_user():
+    global stored_officer_id
+    if "user" in session:
+        stored_officer_id = session["officer_id"]  # ✅ Store globally
+        return jsonify({"user": session["user"], "officer_id": session["officer_id"]})
+    return jsonify({"error": "Not logged in"}), 401
 
 @app.route("/summons", methods=["GET"])
 def get_summons():
-    global summons_data  # Ensure it's updating the global variable
+    global summons_data
     unique_summons = {}
     with lock:
         for plate in detected_plates:
@@ -218,10 +270,14 @@ def get_summons():
             if summons_status and summons_status != "Error":
                 for summon in summons_status:
                     if summon["noticeNo"] not in unique_summons:
+                        summon["latitude"] = plate["latitude"]
+                        summon["longitude"] = plate["longitude"]
+                        summon["snapshot"] = plate["snapshot"]
+                        summon["officer_id"] = plate.get("officer_id", stored_officer_id)  # ✅ Ensure officer_id is included
                         unique_summons[summon["noticeNo"]] = summon
 
     summons_data = list(unique_summons.values())  # Store summons globally
-    return jsonify(list(reversed(summons_data)))  # Reverse to show latest first   
+    return jsonify(list(reversed(summons_data)))  # Reverse to show latest first
 
 @app.route("/download/excel/detected_plates", methods=["GET"])
 def download_detected_plates_excel():
@@ -368,19 +424,21 @@ def download_summons_queue_pdf():
 gps_data_log = []  # Store GPS data temporarily
 
 @app.route("/api/gps", methods=["POST"])
-def receive_gps_data():
-    global gps_data_log
+def receive_gps():
+    global gps_logs
     data = request.json
     if data:
-        gps_data_log.append(data)
-        print(f"📡 Received GPS Data: {data}")  # Debugging output
+        gps_logs.append(data)  # ✅ Store received GPS data
+        if len(gps_logs) > 10:  # ✅ Keep only last 10 entries to prevent memory overflow
+            gps_logs.pop(0)  # Remove oldest entry
+
+        print(f"📡 GPS Data Received: {data}")  # Debugging
         return jsonify({"status": "success"}), 200
     return jsonify({"error": "No data received"}), 400
 
 @app.route("/api/gps/logs", methods=["GET"])
 def get_gps_logs():
     return jsonify(gps_data_log)  # Return logged GPS data
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=False)
