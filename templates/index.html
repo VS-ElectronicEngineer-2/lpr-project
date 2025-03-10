@@ -4,539 +4,438 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>License Plate Recognition Dashboard</title>
-
-    <!-- Leaflet CSS (Required for Map) -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-
+    <title>LPR Dashboard</title>
     <style>
-        /* 🌍 Map Styling */
-        #map {
-            height: 400px;
-            /* Set map height */
-            width: 100%;
-            /* Full width */
-            border-radius: 10px;
-            margin-top: 10px;
-        }
-
-        /* Custom Popup Styling */
-        .custom-popup {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            max-width: 250px;
-            padding: 10px;
-            border-radius: 10px;
-            color: white;
-            box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.3);
-        }
-
-        /* Dynamic Popup Background Colors */
-        .popup-red {
-            background-color: red !important;
-        }
-
-        .popup-green {
-            background-color: green !important;
-        }
-
-        .popup-blue {
-            background-color: blue !important;
-        }
-
-        /* Customizing the popup tip (arrow) */
-        .leaflet-popup-tip {
-            background: inherit !important;
-        }
-    </style>
-
-    <!-- Leaflet JS (Required for Map) -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-
-    <style>
-        /* Base Styling */
+        /* 🔹 Base Styles */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: Arial, sans-serif;
         }
 
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
-            color: #333;
-        }
-
-        header {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            background-color: #0A73B7;
-            padding: 10px;
+            height: 100vh;
         }
 
-        h1 {
+        /* 🔹 Sidebar Styling */
+        .sidebar {
+            width: 250px;
+            background: #1a1a2e;
             color: white;
-            font-size: 24px;
-            text-align: center;
+            padding: 20px 0;
+            height: 100vh;
+            position: fixed;
+            left: 0;
+            top: 0;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-            background: white;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
         }
 
-        /* Centering Live Stream Section */
-        .video-stream-container {
+        .sidebar ul li {
             display: flex;
-            justify-content: center;
             align-items: center;
-            width: 100%;
-            margin-top: 20px;
+            padding: 15px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            transition: background 0.2s ease-in-out;
         }
 
-        .video-section {
-            text-align: center;
-            width: 100%;
-            max-width: 900px;
+        .sidebar ul li:hover {
+            background: #0a3d62;
         }
 
-        .stream {
-            width: 100%;
-            max-width: 900px;
-            height: 450px;
-            border: 3px solid #0A73B7;
-            border-radius: 10px;
+        /* 🔹 Content Layout */
+        .content {
+            flex: 1;
+            padding: 80px 20px 20px 270px;
+        }
+
+        /* 🔹 Top Bar */
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: white;
+            width: calc(100% - 250px);
+            position: fixed;
+            left: 250px;
+            top: 0;
+            height: 60px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+            z-index: 100;
+        }
+
+        .topbar h1 {
+            font-size: 18px;
+            font-weight: bold;
+            color: #031d67;
+        }
+
+        /* 🔹 Section Layout */
+        .section {
             display: none;
         }
 
-        .controls {
-            margin: 10px 0;
-            text-align: center;
+        .active {
+            display: block;
         }
 
-        .controls button {
-            margin: 5px;
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            color: white;
-        }
-
-        .controls button.start {
-            background-color: #4CAF50;
-        }
-
-        .controls button.stop {
-            background-color: #f44336;
-        }
-
-        /* Table Section (Side by Side Layout) */
-        .tables-container {
+        /* 🔹 Profile Container */
+        .profile-container {
+            position: relative;
             display: flex;
-            gap: 20px;
-            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        /* 🔹 Profile Icon */
+        .profile-icon {
+            width: 40px;
+            height: 40px;
+            background: #031d67;
+            color: white;
+            font-size: 16px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-left: 10px;
+        }
+
+        /* 🔹 Dropdown Menu */
+        .dropdown-menu {
+            display: none;
+            position: absolute;
+            top: 50px;
+            right: 0;
+            background: white;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+            width: 200px;
+            padding: 10px 0;
+            z-index: 1000;
+        }
+
+        /* 🔹 Dropdown Items */
+        .dropdown-menu a {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            text-decoration: none;
+            color: black;
+            font-size: 14px;
+        }
+
+        /* 🔹 Hover Effect */
+        .dropdown-menu a:hover {
+            background: #f4f4f4;
+        }
+
+        /* 🔹 Icons Alignment */
+        .dropdown-menu a i {
+            margin-right: 10px;
+        }
+
+        /* 🔹 Live Stream & Tables Container */
+        .live-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: start;
+            justify-content: center;
             margin-top: 20px;
         }
 
-        .table-section {
-            flex: 1;
+        .live-video {
+            width: 100%;
+            max-width: 600px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .data-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .dashboard-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
             width: 100%;
         }
 
+        /* 🔹 Table Styling */
         table {
             width: 100%;
             border-collapse: collapse;
-            background-color: white;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            border-radius: 10px;
-            overflow: hidden;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid black;
         }
 
         th,
         td {
-            text-align: center;
             padding: 10px;
-            border: 1px solid #ddd;
+            text-align: center;
         }
 
         th {
-            background-color: #0A73B7;
+            background-color: #031d67;
             color: white;
         }
 
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        tr:nth-child(odd) {
-            background-color: #fff;
-        }
-
-        .status-paid {
-            color: green;
-            font-weight: bold;
-        }
-
-        .status-not-paid {
-            color: red;
-            font-weight: bold;
-        }
-
-        img {
-            max-width: 100px;
-            height: auto;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        footer {
-            margin-top: 20px;
-            padding: 10px 0;
-            text-align: center;
-            background-color: #0A73B7;
-            color: white;
-        }
-
-        @media (max-width: 768px) {
-            .tables-container {
-                flex-direction: column;
-            }
+        /* 🔹 Dispatch Map */
+        #map {
+            height: 500px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
         }
     </style>
+
+    <!-- 🔹 Leaflet.js (for the Map) -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 </head>
 
 <body>
-    <header>
-        <img src="{{ url_for('static', filename='vista-logo.png') }}" alt="Vista Logo"
-            style="height: 40px; margin-right: 10px;">
+
+    <!-- 🔹 Sidebar -->
+    <div class="sidebar">
+        <ul>
+            <li onclick="showSection('dashboard')"><i>🏠</i> <span>Dashboard</span></li>
+            <li onclick="showSection('livestream')"><i>📡</i> <span>Live Stream</span></li>
+            <li onclick="showSection('dispatch-map')"><i>🗺</i> <span>Dispatch Map</span></li>
+            <li onclick="showSection('tracking')"><i>📍</i> <span>Tracking</span></li>
+        </ul>
+    </div>
+
+    <!-- 🔹 Top Bar -->
+    <div class="topbar">
         <h1>License Plate Recognition Dashboard</h1>
-        <a href="/logout" style="float: right; margin-right: 20px; color: white; font-size: 16px;">Logout</a>
-    </header>
 
-    <div class="container">
-        <h2>🚗 Live Vehicle Tracking</h2>
-        <div id="map"></div>
-    </div>
-
-    <!-- Remove the duplicate map div -->
-
-    <!-- Video Stream Section (Centered) -->
-    <div class="video-stream-container">
-        <div class="video-section">
-            <h2>Live Stream</h2>
-            <div class="controls">
-                <button class="start" onclick="startStream()">Start</button>
-                <button class="stop" onclick="stopStream()">Stop</button>
+        <!-- 🔹 Profile & Logout Dropdown (Move Inside Top Bar) -->
+        <div class="profile-container" onclick="toggleDropdown()">
+            <span class="profile-icon">HM</span>
+            <div id="dropdown-menu" class="dropdown-menu">
+                <a href="#"><i>⚙️</i> Account Settings</a>
+                <a href="/logout"><i>🚪</i> Logout</a>
             </div>
-            <img id="videoStream" src="" alt="Video Stream" class="stream">
         </div>
     </div>
 
-    <!-- Tables Section (Side by Side) -->
-    <div class="tables-container">
-        <!-- Detected Plates Table -->
-        <div class="table-section">
-            <h2>Detected Plates</h2>
-            <button onclick="downloadExcel('detected_plates')">Download Excel</button>
-            <button onclick="downloadPDF('detected_plates')">Download PDF</button>
-            <table>
-                <thead>
-                    <tr>
-                        <th>License Plate</th>
-                        <th>Status</th>
-                        <th>Time</th>
-                        <th>Latitude</th> <!-- ✅ Add Latitude Column -->
-                        <th>Longitude</th> <!-- ✅ Add Longitude Column -->
-                        <th>Snapshot</th>
-                    </tr>
-                </thead>
-                <tbody id="plate-table">
-                    <!-- Dynamic rows will be inserted here -->
-                </tbody>
-            </table>
+    <!-- Main Content -->
+    <div class="content">
+
+        <!-- Dashboard Section -->
+        <div id="dashboard" class="section active">
+            <h2>Dashboard</h2>
+            <div class="dashboard-card">
+                <h3>Detected Plates & Summons Queue</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>License Plate</th>
+                            <th>Status</th>
+                            <th>Time</th>
+                            <th>Notice No</th>
+                            <th>Offence</th>
+                            <th>Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody id="combinedTable"></tbody>
+                </table>
+            </div>
         </div>
 
-        <!-- Summons Queue Table -->
-        <div class="table-section">
-            <h2>Summons Queue</h2>
-            <button onclick="downloadExcel('summons_queue')">Download Excel</button>
-            <button onclick="downloadPDF('summons_queue')">Download PDF</button>
-            <table>
-                <thead>
-                    <tr>
-                        <th>License Plate</th>
-                        <th>Notice No</th>
-                        <th>Offence</th>
-                        <th>Location</th>
-                        <th>Date</th>
-                        <th>Status</th>
-                        <th>Fine Amount</th>
-                        <th>Due Date</th>
-                    </tr>
-                </thead>
-                <tbody id="summons-table">
-                    <!-- Summons data will be inserted here dynamically -->
-                </tbody>
-            </table>
+        <!-- Live Stream Section -->
+        <div id="livestream" class="section">
+            <h2>Live Stream</h2>
+            <div class="live-container">
+                <img src="/video_feed" class="live-video" alt="Live Stream">
+                <div class="data-container">
+                    <div class="dashboard-card">
+                        <h3>Detected Plates (Live)</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>License Plate</th>
+                                    <th>Status</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody id="detectedPlatesLive"></tbody>
+                        </table>
+                    </div>
+                    <div class="dashboard-card">
+                        <h3>Summons Queue (Live)</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>License Plate</th>
+                                    <th>Notice No</th>
+                                    <th>Offence</th>
+                                    <th>Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summonsTableLive"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
-    </div>
+
+        <!-- Dispatch Map Section -->
+        <div id="dispatch-map" class="section">
+            <h2>Dispatch Map</h2>
+            <div id="map"></div>
+        </div>
+
     </div>
 
-    <footer>
-        © 2025 License Plate Recognition System
-    </footer>
-
+    <!-- 🔹 JavaScript -->
     <script>
-        const videoStream = document.getElementById("videoStream");
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
+            let section = document.getElementById(sectionId);
+            section.classList.add('active');
 
-        function startStream() {
-            videoStream.src = "/video_feed";
-            videoStream.style.display = "block";
-        }
-
-        function stopStream() {
-            videoStream.src = "";
-            videoStream.style.display = "none";
-        }
-
-        function downloadExcel(type) {
-            window.location.href = `/download/excel/${type}`;
-        }
-
-        function downloadPDF(type) {
-            window.location.href = `/download/pdf/${type}`;
-
-        }
-
-        async function fetchPlates() {
-            try {
-                const response = await fetch("/plates");
-                const data = await response.json();
-                const table = document.getElementById("plate-table");
-                table.innerHTML = ""; // Clear previous rows before updating
-
-                data.forEach((plate) => {
-                    const statusClass = plate.status === "Not Paid" ? "status-not-paid" : "status-paid";
-
-                    // ✅ Handle missing GPS data
-                    const latitude = plate.latitude ? plate.latitude.toFixed(6) : "N/A";
-                    const longitude = plate.longitude ? plate.longitude.toFixed(6) : "N/A";
-
-                    const row = `
-            <tr>
-                <td>${plate.plate}</td>
-                <td class="${statusClass}">${plate.status}</td>
-                <td>${plate.time}</td>
-                <td>${latitude}</td> <!-- ✅ Show Latitude -->
-                <td>${longitude}</td> <!-- ✅ Show Longitude -->
-                <td><img src="${plate.snapshot}" alt="Snapshot"></td>
-            </tr>
-            `;
-                    table.innerHTML += row; // Append new row at the top
-                });
-            } catch (error) {
-                console.error("Error fetching plates:", error);
+            if (sectionId === 'dispatch-map') {
+                setTimeout(() => {
+                    map.invalidateSize(); // Refresh map size
+                    updateMap(); // Reload detected plates
+                }, 500);
             }
         }
 
-        async function fetchSummons() {
-            try {
-                const response = await fetch("/summons");
-                const summonsData = await response.json();
-                const table = document.getElementById("summons-table");
+        // ✅ Initialize Leaflet Map Properly
+        let map = L.map('map').setView([3.1390, 101.6869], 12);
 
-                table.innerHTML = ""; // Clear previous rows before updating
-
-                if (summonsData.length === 0) {
-                    table.innerHTML = "<tr><td colspan='8'>No summons found</td></tr>";
-                    return;
-                }
-
-                summonsData.forEach((summons) => {
-                    const row = `
-            <tr>
-                <td>${summons.plate}</td>
-                <td>${summons.noticeNo}</td>
-                <td>${summons.offence}</td>
-                <td>${summons.location}</td>
-                <td>${summons.date}</td>
-                <td>${summons.status}</td>
-                <td>${summons.amount}</td>
-                <td>${summons.due_date}</td>
-            </tr>
-        `;
-                    table.innerHTML += row; // Append new row at the top
-                });
-            } catch (error) {
-                console.error("Error fetching summons:", error);
-            }
-        }
-
-        setInterval(() => {
-            fetchPlates();
-            fetchSummons();
-        }, 5000);
-
-        fetchPlates();
-        fetchSummons();
-
-        // 🌍 Initialize the map
-        var map = L.map('map').setView([3.20785486, 101.779788197], 16); // Default starting location
-
-        // 📌 Add OpenStreetMap tile layer
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
-        // 📍 Define Custom Icons for Different Statuses
-        const redIcon = L.icon({
-            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
-        });
+        let plateMarkers = {}; // Store markers to avoid duplicatio
 
-        const greenIcon = L.icon({
-            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
-        });
-
-        const blueIcon = L.icon({
-            iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-blue.png',
-            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
-        });
-
-        // 🔄 Function to Update GPS Data and Map
-        function updateGPS() {
-            fetch('/plates')
-                .then(response => response.json())
-                .then(plateData => {
-                    fetch('/summons') // Get summons queue
-                        .then(response => response.json())
-                        .then(summonsData => {
-                            // ✅ Remove old markers before adding new ones
-                            map.eachLayer((layer) => {
-                                if (layer instanceof L.Marker) {
-                                    map.removeLayer(layer);
-                                }
-                            });
-
-                            plateData.forEach((plate) => {
-                                if (plate.latitude && plate.longitude) {
-                                    const lat = plate.latitude;
-                                    const lon = plate.longitude;
-                                    const plateNumber = plate.plate;
-                                    const status = plate.status;
-                                    const time = plate.time;
-                                    const snapshot = plate.snapshot;
-                                    const officerId = plate.officer_id || "Unknown"; // ✅ Get Officer ID (Ensure fallback if undefined)
-
-                                    // 🔍 Check if this plate exists in the summons queue
-                                    let hasSummons = summonsData.some(summon => summon.plate === plateNumber);
-
-                                    // 🟢 Assign Marker Color Based on Status
-                                    let markerIcon = redIcon; // Default: Not Paid (Red)
-                                    if (status.toLowerCase().startsWith("paid")) {
-                                        markerIcon = greenIcon; // Paid (Green)
-                                    }
-                                    if (hasSummons) {
-                                        markerIcon = blueIcon; // Summons (Blue)
-                                    }
-
-                                    // Determine background color based on status
-                                    let popupBackgroundColor = "red"; // Default: Not Paid (Red)
-                                    if (status.toLowerCase().includes("paid")) {
-                                        popupBackgroundColor = "green"; // Paid (Green)
-                                    } else if (hasSummons) {
-                                        popupBackgroundColor = "blue"; // Summons (Blue)
-                                    }
-
-
-                                    // 📌 Add marker with properly styled pop-up
-                                    L.marker([lat, lon], { icon: markerIcon })
-                                        .addTo(map)
-                                        .bindPopup(`
-                                            <div style="
-                                                font-family: Arial, sans-serif;
-                                                text-align: center; 
-                                                max-width: 250px; 
-                                                padding: 10px; 
-                                                border-radius: 10px; 
-                                                background-color: ${popupBackgroundColor}; 
-                                                color: white; 
-                                                box-shadow: 2px 2px 10px rgba(0,0,0,0.3);">
-            
-                                                <h3 style="margin: 5px 0; font-size: 18px; font-weight: bold; text-transform: uppercase;">${plateNumber}</h3>
-                                                <p style="margin: 3px 0;"><b>Status:</b> <span style="color: white;">${status}</span></p>
-                                                <p style="margin: 3px 0;"><b>Time:</b> ${time}</p>
-                                                <p style="margin: 3px 0;"><b>Officer ID:</b> ${officerId}</p>
-                                                <div style="display: flex; justify-content: center; margin-top: 5px;">
-                                                    <img src="${snapshot}" width="220px" height="140px" 
-                                                         style="border: 2px solid white; border-radius: 10px;">
-                                                </div>
-                                            </div>
-                                        `, { className: 'custom-popup' }); // 👈 Important: Use a custom class
-
-                                }
-                            });
-
-                            // ✅ Add Summons Queue Markers (Blue)
-                            summonsData.forEach((summon) => {
-                                if (summon.latitude && summon.longitude) {
-                                    const lat = summon.latitude;
-                                    const lon = summon.longitude;
-                                    const plateNumber = summon.plate;
-                                    const noticeNo = summon.noticeNo;
-                                    const offence = summon.offence;
-                                    const location = summon.location;
-                                    const date = summon.date;
-                                    const amount = summon.amount;
-                                    const snapshot = summon.snapshot; // ✅ Get Snapshot
-
-                                    // 📌 Add Summons Marker (Blue)
-                                    L.marker([lat, lon], { icon: blueIcon })
-                                        .addTo(map)
-                                        .bindPopup(`
-                                    <b>Summons for Plate:</b> ${plateNumber} <br>
-                                    <b>Notice No:</b> ${noticeNo} <br>
-                                    <b>Offence:</b> ${offence} <br>
-                                    <b>Location:</b> ${location} <br>
-                                    <b>Date:</b> ${date} <br>
-                                    <b>Fine Amount:</b> ${amount} <br>
-                                    <b>Officer ID:</b> ${summon.officer_id || "Unknown"} <br> <!-- ✅ Show officer ID -->
-                                    <img src="${snapshot}" width="100px" height="70px">
-                                `);
-                                }
-                            });
-
-                        })
-                        .catch(error => console.error("Failed to fetch summons queue data:", error));
-                })
-                .catch(error => console.error("Failed to fetch detected plate GPS data:", error));
+        function toggleDropdown() {
+            var menu = document.getElementById("dropdown-menu");
+            menu.style.display = (menu.style.display === "block") ? "none" : "block";
         }
 
-        // 🔄 Refresh map every 10 seconds
-        setInterval(updateGPS, 10000);
+        // Close dropdown when clicking outside
+        window.onclick = function (event) {
+            if (!event.target.closest('.profile-container')) {
+                document.getElementById("dropdown-menu").style.display = "none";
+            }
+        }
 
-        // ✅ Call updateGPS() once when the page loads
-        document.addEventListener("DOMContentLoaded", updateGPS);
+        function updateMap() {
+            fetch("/plates") // Fetch detected plates with GPS coordinates
+                .then(response => response.json())
+                .then(plates => {
+                    console.log("Fetched plates data:", plates); // Debugging line ✅
+
+                    plates.forEach(plate => {
+                        const { plate: plateNo, lat, lon, status } = plate;
+
+                        if (!lat || !lon) {
+                            console.warn(`Skipping plate ${plateNo}: Missing lat/lon`); // Debugging
+                            return;
+                        }
+
+                        // Remove old marker if exists
+                        if (plateMarkers[plateNo]) {
+                            map.removeLayer(plateMarkers[plateNo]);
+                        }
+
+                        // Add new marker
+                        let marker = L.marker([lat, lon]).addTo(map)
+                            .bindPopup(`<b>Plate:</b> ${plateNo}<br><b>Status:</b> ${status}`)
+                            .openPopup();
+
+                        plateMarkers[plateNo] = marker;
+                    });
+                })
+                .catch(error => console.error("❌ Error fetching plate data:", error));
+        }
+
+        function fetchData() {
+            fetch("/plates")
+                .then(response => response.json())
+                .then(detectedData => {
+                    fetch("/summons")
+                        .then(response => response.json())
+                        .then(summonsData => {
+                            let combinedTable = document.getElementById("combinedTable");
+                            let detectedPlatesLive = document.getElementById("detectedPlatesLive");
+                            let summonsQueueLive = document.getElementById("summonsTableLive");
+
+                            combinedTable.innerHTML = "";
+                            detectedPlatesLive.innerHTML = "";
+                            summonsQueueLive.innerHTML = "";
+
+                            detectedData.forEach(plate => {
+                                let matchingSummons = summonsData.filter(s => s.plate === plate.plate); // ✅ Find all summons for this plate
+
+                                let noticeNo = "N/A";
+                                let offence = "No Offence";
+                                let amount = "N/A";
+
+                                if (matchingSummons.length > 0) {
+                                    noticeNo = matchingSummons.map(s => s.noticeNo).join(", ");
+                                    offence = matchingSummons.map(s => s.offence).join(" | ");
+                                    amount = matchingSummons.map(s => s.amount).join(", ");
+                                }
+
+                                combinedTable.innerHTML += `
+                            <tr>
+                                <td>${plate.plate}</td>
+                                <td>${plate.status}</td>
+                                <td>${plate.time}</td>
+                                <td>${noticeNo}</td>
+                                <td>${offence}</td>
+                                <td>${amount}</td>
+                            </tr>
+                        `;
+
+                                // ✅ Update Detected Plates in Live Stream
+                                detectedPlatesLive.innerHTML += `
+                            <tr>
+                                <td>${plate.plate}</td>
+                                <td>${plate.status}</td>
+                                <td>${plate.time}</td>
+                            </tr>
+                        `;
+
+                                // ✅ Update Summons Queue in Live Stream
+                                summonsQueueLive.innerHTML += `
+                            <tr>
+                                <td>${plate.plate}</td>
+                                <td>${noticeNo}</td>
+                                <td>${offence}</td>
+                                <td>${amount}</td>
+                            </tr>
+                        `;
+                            });
+                        });
+                });
+        }
+
+        // 🔄 Refresh every 5 seconds
+        setInterval(fetchData, 5000);
+        fetchData();
 
     </script>
 
