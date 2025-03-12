@@ -145,27 +145,73 @@
 
         /* 🔹 Live Stream & Tables Container */
         .live-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 30px;
-            align-items: start;
-            justify-content: center;
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
             margin-top: 20px;
+        }
+
+        .live-video-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            /* Take full width */
         }
 
         .live-video {
             width: 100%;
-            max-width: 600px;
+            max-width: 1200px;
+            /* Increase the max width */
+            height: 600px;
+            /* Increase height */
+            object-fit: cover;
+            /* Ensures the aspect ratio is maintained */
             border-radius: 10px;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
         }
 
-        .data-container {
+        /* Increase the gap between live stream and table */
+        .live-container {
             display: flex;
-            flex-direction: column;
-            gap: 20px;
+            gap: 50px;
+            /* More space between video and detected plates table */
+            align-items: flex-start;
+            margin-top: 20px;
         }
 
+        /* Adjust table container so it doesn’t take too much space */
+        .dashboard-card {
+            width: 600px;
+            /* Set fixed width for the detected plates table */
+        }
+
+        /* 🔹 Start & Stop Buttons */
+        .button-container {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 5px;
+        }
+
+        .start-btn {
+            background: green;
+            color: white;
+        }
+
+        .stop-btn {
+            background: red;
+            color: white;
+        }
+
+        /* 🔹 Right Section: Table */
         .dashboard-card {
             background: white;
             padding: 20px;
@@ -197,17 +243,40 @@
             color: white;
         }
 
-        /* 🔹 Dispatch Map */
+        /* ✅ Ensure the map is visible and properly sized */
         #map {
             height: 500px;
+            /* Adjust as needed */
+            width: 100%;
+            /* Ensures full width */
+            min-width: 500px;
+            /* Prevents it from shrinking */
+            max-width: 1200px;
+            /* Limits maximum width */
+            margin: auto;
+            /* Centers the map */
             border-radius: 10px;
             box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            display: block;
+            /* Ensure it's visible */
         }
     </style>
 
     <!-- 🔹 Leaflet.js (for the Map) -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+    <head>
+        ...
+        <!-- ✅ Load jsPDF -->
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+        <!-- ✅ Load autoTable plugin -->
+        <script
+            src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+    </head>
+
 </head>
 
 <body>
@@ -255,189 +324,423 @@
                             <th>Amount</th>
                         </tr>
                     </thead>
-                    <tbody id="combinedTable"></tbody>
+                    <tbody id="dashboardTable"></tbody>
                 </table>
             </div>
+        </div>
+
+        <!-- ✅ Dispatch Map Section (Map should be separate and inside this section) -->
+        <div id="dispatch-map" class="section">
+            <h2>Dispatch Map</h2>
+            <div id="map"></div> <!-- 🔹 Map div should be here -->
         </div>
 
         <!-- Live Stream Section -->
         <div id="livestream" class="section">
             <h2>Live Stream</h2>
+
             <div class="live-container">
-                <img src="/video_feed" class="live-video" alt="Live Stream">
-                <div class="data-container">
-                    <div class="dashboard-card">
-                        <h3>Detected Plates (Live)</h3>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>License Plate</th>
-                                    <th>Status</th>
-                                    <th>Time</th>
-                                </tr>
-                            </thead>
-                            <tbody id="detectedPlatesLive"></tbody>
-                        </table>
-                    </div>
-                    <div class="dashboard-card">
-                        <h3>Summons Queue (Live)</h3>
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>License Plate</th>
-                                    <th>Notice No</th>
-                                    <th>Offence</th>
-                                    <th>Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody id="summonsTableLive"></tbody>
-                        </table>
+                <!-- ✅ Left Section: Live Stream Video -->
+                <div class="live-video-container">
+                    <img id="liveStreamVideo" src="/video_feed" class="live-video" alt="Live Stream">
+
+                    <!-- ✅ Start & Stop Buttons BELOW the live stream -->
+                    <div class="button-container">
+                        <button class="btn start-btn" onclick="startLiveStream()">Start</button>
+                        <button class="btn stop-btn" onclick="stopLiveStream()">Stop</button>
                     </div>
                 </div>
+
+                <!-- ✅ Right Section: Detected Plates Table -->
+                <div class="dashboard-card">
+                    <h3>Detected Plates & Summons Queue (Live)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th> <!-- New column for queue number -->
+                                <th>License Plate</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                                <th>Total Summons</th> <!-- New column for Scofflaw Summons No -->
+                                <th>Action</th> <!-- New column for Download Button -->
+                            </tr>
+                        </thead>
+                        <tbody id="livestreamTable"></tbody>
+                    </table>
+                </div>
             </div>
-        </div>
 
-        <!-- Dispatch Map Section -->
-        <div id="dispatch-map" class="section">
-            <h2>Dispatch Map</h2>
-            <div id="map"></div>
-        </div>
-
-    </div>
-
-    <!-- 🔹 JavaScript -->
-    <script>
-        function showSection(sectionId) {
-            document.querySelectorAll('.section').forEach(section => section.classList.remove('active'));
-            let section = document.getElementById(sectionId);
-            section.classList.add('active');
-
-            if (sectionId === 'dispatch-map') {
-                setTimeout(() => {
-                    map.invalidateSize(); // Refresh map size
-                    updateMap(); // Reload detected plates
-                }, 500);
-            }
-        }
-
-        // ✅ Initialize Leaflet Map Properly
-        let map = L.map('map').setView([3.1390, 101.6869], 12);
-
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors'
-        }).addTo(map);
-
-        let plateMarkers = {}; // Store markers to avoid duplicatio
-
-        function toggleDropdown() {
-            var menu = document.getElementById("dropdown-menu");
-            menu.style.display = (menu.style.display === "block") ? "none" : "block";
-        }
-
-        // Close dropdown when clicking outside
-        window.onclick = function (event) {
-            if (!event.target.closest('.profile-container')) {
-                document.getElementById("dropdown-menu").style.display = "none";
-            }
-        }
-
-        function updateMap() {
-            fetch("/plates") // Fetch detected plates with GPS coordinates
-                .then(response => response.json())
-                .then(plates => {
-                    console.log("Fetched plates data:", plates); // Debugging line ✅
-
-                    plates.forEach(plate => {
-                        const { plate: plateNo, lat, lon, status } = plate;
-
-                        if (!lat || !lon) {
-                            console.warn(`Skipping plate ${plateNo}: Missing lat/lon`); // Debugging
-                            return;
-                        }
-
-                        // Remove old marker if exists
-                        if (plateMarkers[plateNo]) {
-                            map.removeLayer(plateMarkers[plateNo]);
-                        }
-
-                        // Add new marker
-                        let marker = L.marker([lat, lon]).addTo(map)
-                            .bindPopup(`<b>Plate:</b> ${plateNo}<br><b>Status:</b> ${status}`)
-                            .openPopup();
-
-                        plateMarkers[plateNo] = marker;
+            <!-- 🔹 JavaScript -->
+            <script>
+                function showSection(sectionId) {
+                    document.querySelectorAll('.section').forEach(section => {
+                        section.classList.toggle('active', section.id === sectionId);
                     });
-                })
-                .catch(error => console.error("❌ Error fetching plate data:", error));
-        }
 
-        function fetchData() {
-            fetch("/plates")
-                .then(response => response.json())
-                .then(detectedData => {
-                    fetch("/summons")
+                    if (sectionId === 'dashboard') {
+                        fetchDashboardData();
+                    }
+
+                    if (sectionId === 'dispatch-map') {
+                        setTimeout(() => {
+                            initializeMap();  // 🔹 Initialize the map once
+                            updateMap();  // 🔹 Ensure it resizes properly
+                        }, 300); // 🔹 Small delay ensures the section is visible before updating the map
+                    }
+                }
+
+                let map; // Declare the map variable globally
+
+                // 🔹 STEP 2: Initialize the Map Only Once
+                function initializeMap() {
+                    if (!map) { // 🔹 Prevents multiple map creations
+                        map = L.map('map').setView([3.1390, 101.6869], 12);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: '&copy; OpenStreetMap contributors'
+                        }).addTo(map);
+                    }
+                }
+
+                // 🔹 STEP 3: Ensure the Map Updates When Displayed
+                function updateMap() {
+                    setTimeout(() => {
+                        if (map) {
+                            map.invalidateSize(); // 🔹 Fixes the map alignment issue
+                        }
+                    }, 500); // 🔹 Short delay to ensure it loads before resizing
+                }
+
+                let plateMarkers = {}; // Store markers to avoid duplicatio
+
+                function toggleDropdown() {
+                    var menu = document.getElementById("dropdown-menu");
+                    menu.style.display = (menu.style.display === "block") ? "none" : "block";
+                }
+
+                // Close dropdown when clicking outside
+                window.onclick = function (event) {
+                    if (!event.target.closest('.profile-container')) {
+                        document.getElementById("dropdown-menu").style.display = "none";
+                    }
+                }
+
+                function updateMap() {
+                    fetch("/plates")  // Fetch detected plates from API
+                        .then(response => response.json())
+                        .then(detectedPlates => {
+                            return fetch("/summons")
+                                .then(response => response.json())
+                                .then(summonsData => {
+                                    console.log("📌 Detected Plates:", detectedPlates);
+                                    console.log("📌 Summons Data:", summonsData);
+
+                                    // Remove old markers
+                                    Object.values(plateMarkers).forEach(marker => map.removeLayer(marker));
+                                    plateMarkers = {}; // Clear markers
+
+                                    detectedPlates.forEach(plate => {
+                                        const { plate: plateNo, latitude, longitude, status, snapshot, time, officer_id } = plate;
+
+                                        if (!latitude || !longitude) {
+                                            console.warn(`🚨 Skipping plate ${plateNo}: No GPS Data`);
+                                            return;
+                                        }
+
+                                        // ✅ Check if this plate has an outstanding summons
+                                        let isScofflaw = summonsData.some(summon => summon.plate === plateNo);
+
+                                        // ✅ Set the correct colors
+                                        let borderColor, markerColor;
+                                        let lowerCaseStatus = status.toLowerCase().trim(); // Normalize case & remove spaces
+
+                                        // ✅ Prioritize Scofflaw FIRST
+                                        if (isScofflaw) {
+                                            borderColor = "blue";  // 🔵 Scofflaw
+                                            markerColor = "blue";
+                                        } else if (lowerCaseStatus === "paid" || lowerCaseStatus.startsWith("paid ")) {
+                                            borderColor = "green";  // 🟢 Paid
+                                            markerColor = "green";
+                                        } else if (lowerCaseStatus === "not paid" || lowerCaseStatus.startsWith("not paid ")) {
+                                            borderColor = "red";  // 🔴 Not Paid
+                                            markerColor = "red";
+                                        } else {
+                                            borderColor = "gray";  // ⚪ Default unknown status
+                                            markerColor = "gray";
+                                        }
+
+                                        // ✅ Debugging log
+                                        console.log(`🚗 Plate: ${plateNo} | Status: ${status} | Scofflaw: ${isScofflaw} | Assigned Color: ${borderColor}`);
+
+                                        // ✅ Custom marker icon with dynamic color
+                                        let customIcon = L.divIcon({
+                                            className: "custom-marker",
+                                            html: `<div style="background-color:${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>`,
+                                            iconSize: [20, 20]
+                                        });
+
+                                        // ✅ Add marker with proper color
+                                        let marker = L.marker([latitude, longitude], { icon: customIcon }).addTo(map);
+                                        plateMarkers[plateNo] = marker;
+
+                                        // ✅ Full background color for popup
+                                        let popupContent = `
+                            <div style="width:250px; background-color:${borderColor}; color:white; border-radius: 10px; padding: 10px;">
+                                <strong>Plate:</strong> ${plateNo}<br>
+                                <strong>Status:</strong> ${isScofflaw ? "Scofflaw" : status}<br>
+                                <strong>Time:</strong> ${time}<br>
+                                <strong>Officer ID:</strong> ${officer_id}<br>
+                                <img src="${snapshot}" style="width:100%; margin-top:5px; border-radius:5px;">
+                            </div>
+                        `;
+
+                                        // ✅ Bind popup to marker
+                                        marker.bindPopup(popupContent);
+                                    });
+                                });
+                        })
+                        .catch(error => console.error("❌ Error fetching plates:", error));
+                }
+
+
+                function startLiveStream() {
+                    document.getElementById("liveStreamVideo").src = "/video_feed";
+                }
+
+                function stopLiveStream() {
+                    document.getElementById("liveStreamVideo").src = "";
+                }
+
+                function fetchData() {
+                    fetch("/plates")
+                        .then(response => response.json())
+                        .then(detectedData => {
+                            fetch("/summons")
+                                .then(response => response.json())
+                                .then(summonsData => {
+                                    let livestreamTable = document.getElementById("livestreamTable");
+                                    livestreamTable.innerHTML = ""; // Clear previous data
+
+                                    let allPlates = []; // Store plates with queue numbers
+
+                                    // Combine detected plates and summons
+                                    detectedData.forEach(plate => {
+                                        allPlates.push({
+                                            plate: plate.plate,
+                                            status: plate.status,
+                                            time: plate.time,
+                                            isScofflaw: false,
+                                            summonsNo: "" // Default empty
+                                        });
+                                    });
+
+                                    // Mark summons plates and assign queue numbers
+                                    let scofflawQueue = 1; // Start summons queue at 1
+                                    summonsData.forEach(summon => {
+                                        let existing = allPlates.find(p => p.plate === summon.plate);
+                                        if (existing) {
+                                            existing.status = "Scofflaw";
+                                            existing.isScofflaw = true;
+                                            existing.summonsNo = `${scofflawQueue}`; // Assign queue number
+                                            scofflawQueue++;
+                                        } else {
+                                            allPlates.push({
+                                                plate: summon.plate,
+                                                status: "Scofflaw",
+                                                time: "N/A",
+                                                isScofflaw: true,
+                                                summonsNo: `${scofflawQueue}`
+                                            });
+                                            scofflawQueue++;
+                                        }
+                                    });
+
+                                    // Display with queue numbers
+                                    allPlates.forEach((entry, index) => {
+                                        let statusColor = entry.status.includes("Not Paid") ? "red" :
+                                            entry.status.includes("Paid") ? "green" :
+                                                "blue";  // Default blue for scofflaw
+
+                                        let summonsColumn = entry.isScofflaw ? entry.summonsNo : "-"; // Show queue number for scofflaw only
+
+                                        let actionButton = entry.isScofflaw
+                                            ? `<button onclick="generatePDF('${entry.plate}')" 
+                                       style="background: blue; color: white; border: none; padding: 5px; cursor: pointer;">
+                                       Download PDF
+                                </button>`
+                                            : "-";
+
+                                        let rowHTML = `
+                        <tr>
+                            <td>${index + 1}</td> <!-- Row Number -->
+                            <td style="color:${statusColor}; font-weight:bold;">${entry.plate}</td>
+                            <td style="color:${statusColor}; font-weight:bold;">${entry.status}</td>
+                            <td style="color:${statusColor}; font-weight:bold;">${entry.time}</td>
+                            <td>${summonsColumn}</td> <!-- Show summons number for Scofflaw -->
+                            <td>${actionButton}</td>
+                        </tr>`;
+
+                                        livestreamTable.innerHTML += rowHTML;
+                                    });
+                                });
+                        });
+                }
+
+                function fetchDashboardData() {
+                    fetch("/plates")
+                        .then(response => response.json())
+                        .then(detectedData => {
+                            fetch("/summons")
+                                .then(response => response.json())
+                                .then(summonsData => {
+                                    let combinedTable = document.getElementById("dashboardTable");
+                                    combinedTable.innerHTML = "";
+
+                                    detectedData.forEach(plate => {
+                                        let matchingSummons = summonsData.filter(s => s.plate === plate.plate);
+                                        let statusText = plate.status;
+                                        let statusColor = statusText.includes("Not Paid") ? "red" : "green";
+                                        if (matchingSummons.length > 0) {
+                                            statusText = "Scofflaw";
+                                            statusColor = "blue";
+                                        }
+
+                                        combinedTable.innerHTML += `
+                                    <tr>
+                                        <td style="color:${statusColor}; font-weight:bold;">${plate.plate}</td>
+                                        <td style="color:${statusColor}; font-weight:bold;">${statusText}</td>
+                                        <td style="color:${statusColor}; font-weight:bold;">${plate.time}</td>
+                                        <td>${matchingSummons.map(s => s.noticeNo).join(", ") || "N/A"}</td>
+                                        <td>${matchingSummons.map(s => s.offence).join(" | ") || "No Offence"}</td>
+                                        <td>${matchingSummons.map(s => s.amount).join(", ") || "N/A"}</td>
+                                    </tr>
+                                `;
+                                    });
+                                });
+                        });
+                }
+
+                function generatePDF(plateNumber) {
+                    if (!window.jspdf) {
+                        alert("Error: jsPDF is not loaded. Please check the script import.");
+                        return;
+                    }
+
+                    fetch(`/summons?plate=${plateNumber}`)
                         .then(response => response.json())
                         .then(summonsData => {
-                            let combinedTable = document.getElementById("combinedTable");
-                            let detectedPlatesLive = document.getElementById("detectedPlatesLive");
-                            let summonsQueueLive = document.getElementById("summonsTableLive");
+                            if (summonsData.length === 0) {
+                                alert("No summons found for this plate.");
+                                return;
+                            }
 
-                            combinedTable.innerHTML = "";
-                            detectedPlatesLive.innerHTML = "";
-                            summonsQueueLive.innerHTML = "";
+                            const { jsPDF } = window.jspdf;
+                            const doc = new jsPDF();
 
-                            detectedData.forEach(plate => {
-                                let matchingSummons = summonsData.filter(s => s.plate === plate.plate); // ✅ Find all summons for this plate
+                            if (!doc.autoTable) {
+                                alert("Error: jsPDF autoTable plugin is missing.");
+                                return;
+                            }
 
-                                let noticeNo = "N/A";
-                                let offence = "No Offence";
-                                let amount = "N/A";
+                            // ✅ Title Formatting
+                            doc.setFontSize(16);
+                            doc.setFont("helvetica", "bold");
+                            doc.text("NOTIS TERTUNGGAK", 105, 20, { align: "center" });
+                            doc.text("KESALAHAN DI BAWAH", 105, 30, { align: "center" });
+                            doc.text("AKTA PENGANGKUTAN JALAN 1987", 105, 40, { align: "center" });
 
-                                if (matchingSummons.length > 0) {
-                                    noticeNo = matchingSummons.map(s => s.noticeNo).join(", ");
-                                    offence = matchingSummons.map(s => s.offence).join(" | ");
-                                    amount = matchingSummons.map(s => s.amount).join(", ");
+                            // ✅ Document Metadata
+                            doc.setFontSize(12);
+                            doc.setFont("helvetica", "normal");
+                            let startY = 50;
+                            doc.text(`Tarikh Cetak     : ${new Date().toISOString().split('T')[0]}`, 15, startY);
+                            doc.text(`No Rujukan       : -`, 15, startY + 6);
+                            doc.text(`No Pendaftaran Kenderaan : ${plateNumber}`, 15, startY + 12);
+                            doc.text(`Nama Pemilik Berdaftar  : -`, 15, startY + 18);
+                            doc.text(`ID Pemilik       : -`, 15, startY + 24);
+                            doc.text(`Address          : -`, 15, startY + 30);
+
+                            // ✅ Add Explanation Text
+                            let tableY = startY + 40;
+                            doc.setFontSize(10);
+                            doc.text("Berhubung dengan notis saman bernombor, BAHWASANYA anda telah melakukan kesalahan berikut:", 15, tableY);
+
+                            tableY += 10;
+
+                            // ✅ Extract "Perintah X (Y)" from the Offence Text
+                            function extractPerintah(offenceText) {
+                                // Try to find "PERINTAH X (Y)"
+                                let match = offenceText.match(/PERINTAH\s\d+\s*\(\d+\)/i);
+                                if (match) {
+                                    return match[0];  // Return "Perintah X (Y)" if found
                                 }
 
-                                combinedTable.innerHTML += `
-                            <tr>
-                                <td>${plate.plate}</td>
-                                <td>${plate.status}</td>
-                                <td>${plate.time}</td>
-                                <td>${noticeNo}</td>
-                                <td>${offence}</td>
-                                <td>${amount}</td>
-                            </tr>
-                        `;
+                                // If no "PERINTAH" is found, check for alternative formats
+                                let matchAlt = offenceText.match(/\bPERINTAH\s\d+/i);
+                                if (matchAlt) {
+                                    return matchAlt[0]; // Return "Perintah X" if found
+                                }
 
-                                // ✅ Update Detected Plates in Live Stream
-                                detectedPlatesLive.innerHTML += `
-                            <tr>
-                                <td>${plate.plate}</td>
-                                <td>${plate.status}</td>
-                                <td>${plate.time}</td>
-                            </tr>
-                        `;
+                                // Default: Return full text if nothing matches
+                                return offenceText;
+                            }
 
-                                // ✅ Update Summons Queue in Live Stream
-                                summonsQueueLive.innerHTML += `
-                            <tr>
-                                <td>${plate.plate}</td>
-                                <td>${noticeNo}</td>
-                                <td>${offence}</td>
-                                <td>${amount}</td>
-                            </tr>
-                        `;
+                            // ✅ Use autoTable for proper alignment
+                            doc.autoTable({
+                                startY: tableY,
+                                head: [["Bil", "Tarikh", "Rujukan Kompaun", "Kesalahan", "Lokasi", "Jumlah (RM)"]],
+                                body: summonsData.map((summon, index) => [
+                                    index + 1,
+                                    summon.date || "-",
+                                    summon.noticeNo || "-",
+                                    extractPerintah(summon.offence), // Extract only "Perintah X (Y)"
+                                    summon.location || "-",
+                                    `RM${summon.amount || "0.00"}`
+                                ]),
+                                styles: { fontSize: 10 },
+                                headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
+                                columnStyles: {
+                                    0: { cellWidth: 10 },
+                                    1: { cellWidth: 25 },
+                                    2: { cellWidth: 40 },
+                                    3: { cellWidth: 35 }, // Adjusted for shorter text
+                                    4: { cellWidth: 50 },
+                                    5: { cellWidth: 25, halign: "right" }
+                                },
+                                theme: "grid"
                             });
-                        });
-                });
-        }
 
-        // 🔄 Refresh every 5 seconds
-        setInterval(fetchData, 5000);
-        fetchData();
+                            // ✅ Calculate total amount
+                            let totalAmount = summonsData.reduce((sum, summon) => sum + parseFloat(summon.amount || 0), 0);
+                            let finalY = doc.lastAutoTable.finalY + 10;
+                            doc.text(`Jumlah Keseluruhan: RM${totalAmount.toFixed(2)}`, 145, finalY);
 
-    </script>
+                            // ✅ Add Final Notice
+                            finalY += 15;
+                            doc.text("Tuan/Puan dikehendaki menyelesaikan segala tunggakan di atas dalam tempoh 14 hari dari notis ini dikeluarkan.", 15, finalY);
+                            doc.text("Sekiranya gagal berbuat demikian, tindakan undang-undang akan diambil.", 15, finalY + 6);
+
+                            // ✅ Footer Section
+                            finalY += 18;
+                            doc.text("Sekian, terima kasih.", 15, finalY);
+                            doc.text("..............................................", 15, finalY + 12);
+                            doc.text("Warden Lalu Lintas", 15, finalY + 18);
+                            doc.text("No Anggota:", 15, finalY + 24);
+                            doc.text("Dewan Bandaraya Kuala Lumpur", 15, finalY + 30);
+
+                            // ✅ Save the PDF
+                            doc.save(`${plateNumber}_Summons.pdf`);
+                        })
+                        .catch(error => console.error("❌ Error fetching summons data:", error));
+                }
+
+
+
+                // 🔄 Refresh data every 5 seconds
+                setInterval(fetchData, 5000);
+                fetchData();
+
+
+            </script>
 
 </body>
 

@@ -57,6 +57,22 @@ def parking_status(plate_number):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/plates", methods=["GET"])
+def plates():
+    with lock:
+        return jsonify([
+            {
+                "plate": plate["plate"],
+                "status": plate["status"],
+                "latitude": plate.get("latitude"),
+                "longitude": plate.get("longitude"),
+                "time": plate["time"],
+                "officer_id": plate.get("officer_id", "Unknown"),
+                "snapshot": url_for('static', filename=plate["snapshot"].split("/")[-1])  # Ensure correct image path
+            }
+            for plate in detected_plates
+        ])
+
 # Route for Summons Status
 @app.route("/api/summons-status/<plate_number>", methods=["GET"])
 def summons_status(plate_number):
@@ -73,12 +89,17 @@ def summons_status(plate_number):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-# Route for receiving GPS data
-@app.route("/api/gps", methods=["POST"])
-def receive_gps():
+@app.route('/api/gps', methods=['POST'])
+def receive_gps_data():
+    """Receives GPS data from the tracker."""
     data = request.json
-    detected_plates.append(data)  # Save received GPS data for later
-    return jsonify({"status": "success"}), 200
+    gps_data_list.append(data)  # Save to list (you can use a database)
+    return jsonify({"message": "GPS Data Received"}), 200
+
+@app.route('/api/gps', methods=['GET'])
+def get_gps_data():
+    """Returns all stored GPS data."""
+    return jsonify(gps_data_list), 200  # ✅ This enables GET requests
 
 # Route for GPS logs
 @app.route("/api/gps/logs", methods=["GET"])

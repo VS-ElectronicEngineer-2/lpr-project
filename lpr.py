@@ -34,7 +34,7 @@ if not os.path.exists(app.config["SNAPSHOT_FOLDER"]):
 PLATE_RECOGNIZER_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
 PARKING_API_URL = "https://mycouncil.citycarpark.my/parking/ctcp/services-listerner_mbk.php"
 NODE_API_URL = "http://localhost:5000/api/summons"
-API_TOKEN = "18cc09bdb0d72b43759a67ad9984a81ad2d153f0"
+API_TOKEN = "7ecbf0ad8ef53ceb2c5f00cae78d70006ed357c5"
 PARKING_API_ACTION = "GetParkingRightByPlateVerify"
 
 detected_plates = []
@@ -119,7 +119,7 @@ def recognize_plate(frame):
             PLATE_RECOGNIZER_API_URL,
             files={"upload": ("image.jpg", img_bytes, "image/jpeg")},  # ✅ Correct image upload
             headers={"Authorization": f"Token {API_TOKEN}"},
-            timeout=15  # ✅ Increased timeout
+            timeout=30  # ✅ Increased timeout
         )
 
         print(f"📥 API Response Code: {response.status_code}")
