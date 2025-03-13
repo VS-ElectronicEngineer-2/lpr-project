@@ -76,7 +76,7 @@ app.post("/api/summons", async (req, res) => {
                 let formattedSummons = summonsList.map((summons) => ({
                     plate: summons.VehicleRegistrationNo?.[0] || "Unknown",
                     noticeNo: summons.NoticeNo?.[0] || "Unknown",
-                    offence: summons.OffenceDescription?.[0] || "Unknown",
+                    offence: summons.OffenceSection?.[0] || "Unknown",
                     location: summons.OffenceLocation?.[0] || "Unknown",
                     date: summons.OffenceDate?.[0] || "Unknown",
                     status: summons.NoticeStatus?.[0] === "T" ? "Unpaid" : "Paid",
@@ -106,6 +106,23 @@ app.post("/api/summons", async (req, res) => {
 app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);
 });
+
+
+
+
+
+
+
+
+
+  
+
+
+
+
+
+
+
 
 
 

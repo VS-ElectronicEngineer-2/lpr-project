@@ -634,106 +634,113 @@
                             }
 
                             const { jsPDF } = window.jspdf;
-                            const doc = new jsPDF();
+                            const doc = new jsPDF("p", "mm", "a4"); // A4 Portrait Mode
 
                             if (!doc.autoTable) {
                                 alert("Error: jsPDF autoTable plugin is missing.");
                                 return;
                             }
 
-                            // ✅ Title Formatting
-                            doc.setFontSize(16);
-                            doc.setFont("helvetica", "bold");
-                            doc.text("NOTIS TERTUNGGAK", 105, 20, { align: "center" });
-                            doc.text("KESALAHAN DI BAWAH", 105, 30, { align: "center" });
-                            doc.text("AKTA PENGANGKUTAN JALAN 1987", 105, 40, { align: "center" });
+                            // ✅ Adjusted Logo to Slim and Centered (width 20, height 40)
+                            const logoWidth = 20;
+                            const logoHeight = 40;
+                            const pageWidth = doc.internal.pageSize.getWidth();
+                            const centerX = (pageWidth - logoWidth) / 2;
 
-                            // ✅ Document Metadata
+                            const logoURL = "/static/mbklogo.png";
+                            doc.addImage(logoURL, "PNG", centerX, 10, logoWidth, logoHeight);
+
+                            // ✅ Add Title Below Logo
                             doc.setFontSize(12);
-                            doc.setFont("helvetica", "normal");
-                            let startY = 50;
-                            doc.text(`Tarikh Cetak     : ${new Date().toISOString().split('T')[0]}`, 15, startY);
-                            doc.text(`No Rujukan       : -`, 15, startY + 6);
-                            doc.text(`No Pendaftaran Kenderaan : ${plateNumber}`, 15, startY + 12);
-                            doc.text(`Nama Pemilik Berdaftar  : -`, 15, startY + 18);
-                            doc.text(`ID Pemilik       : -`, 15, startY + 24);
-                            doc.text(`Address          : -`, 15, startY + 30);
+                            doc.setFont("helvetica", "bold");
+                            doc.text("NOTIS TERTUNGGAK", pageWidth / 2, 55, { align: "center" });
+                            doc.text("KESALAHAN DI BAWAH AKTA PENGANGKUTAN JALAN 1987 PERINTAH", pageWidth / 2, 63, { align: "center" });
+                            doc.text("PENGANGKUTAN JALAN (PERUNTUKAN TEMPAT LETAK KERETA)(MAJLIS", pageWidth / 2, 71, { align: "center" });
+                            doc.text("PERBANDARAN KUANTAN) 2005", pageWidth / 2, 79, { align: "center" });
 
-                            // ✅ Add Explanation Text
-                            let tableY = startY + 40;
+                            // ✅ Document Metadata (Aligned Properly)
+                            let startY = 90;
+                            doc.setFontSize(11);
+                            doc.setFont("helvetica", "normal");
+                            doc.text("Tarikh Cetak :", 15, startY);
+                            doc.text(new Date().toISOString().split('T')[0], 50, startY); // Right-aligned date
+
+                            doc.text("No Pendaftaran Kenderaan :", 15, startY + 6);
+                            doc.text(plateNumber, 70, startY + 6); // Right-aligned plate number
+
+                            // ✅ Explanation Text
+                            let tableY = startY + 16;
                             doc.setFontSize(10);
-                            doc.text("Berhubung dengan notis saman bernombor, BAHWASANYA anda telah melakukan kesalahan berikut:", 15, tableY);
+                            doc.text("BAHAWASANYA saya mempunyai alasan yang munasabah untuk mempercayai bahawa", 15, tableY);
+                            doc.text("anda telah melakukan kesalahan seperti berikut:", 15, tableY + 5);
 
                             tableY += 10;
 
-                            // ✅ Extract "Perintah X (Y)" from the Offence Text
-                            function extractPerintah(offenceText) {
-                                // Try to find "PERINTAH X (Y)"
-                                let match = offenceText.match(/PERINTAH\s\d+\s*\(\d+\)/i);
-                                if (match) {
-                                    return match[0];  // Return "Perintah X (Y)" if found
-                                }
-
-                                // If no "PERINTAH" is found, check for alternative formats
-                                let matchAlt = offenceText.match(/\bPERINTAH\s\d+/i);
-                                if (matchAlt) {
-                                    return matchAlt[0]; // Return "Perintah X" if found
-                                }
-
-                                // Default: Return full text if nothing matches
-                                return offenceText;
-                            }
-
-                            // ✅ Use autoTable for proper alignment
+                            // ✅ Table Formatting (Properly Aligned)
                             doc.autoTable({
                                 startY: tableY,
-                                head: [["Bil", "Tarikh", "Rujukan Kompaun", "Kesalahan", "Lokasi", "Jumlah (RM)"]],
+                                head: [["Bil", "Tarikh", "No. Kompaun", "Kesalahan", "Lokasi", "Jumlah (RM)"]],
                                 body: summonsData.map((summon, index) => [
-                                    index + 1,
+                                    `${index + 1}.`,
                                     summon.date || "-",
                                     summon.noticeNo || "-",
-                                    extractPerintah(summon.offence), // Extract only "Perintah X (Y)"
+                                    `PERINTAH ${summon.offence || "-"}`, // ✅ Prepend "PERINTAH" before the offence number
                                     summon.location || "-",
-                                    `RM${summon.amount || "0.00"}`
+                                    `RM${(summon.amount || "0").toString().replace(/[^\d.]/g, "")}`
+
                                 ]),
-                                styles: { fontSize: 10 },
-                                headStyles: { fillColor: [0, 0, 0], textColor: [255, 255, 255] },
+                                styles: {
+                                    fontSize: 9, // ✅ Smaller font for compact look
+                                    lineWidth: 0.3, // ✅ Thinner Borders
+                                    cellPadding: 2, // ✅ Less Padding
+                                    valign: "middle",
+                                    textColor: [0, 0, 0] // ✅ Black text
+                                },
+                                headStyles: {
+                                    fillColor: [255, 255, 255], // ✅ No Background Color
+                                    textColor: [0, 0, 0], // ✅ Black Text for Headers
+                                    fontSize: 10,
+                                    fontStyle: "bold",
+                                    lineWidth: 0.4 // ✅ Slightly Darker Borders
+                                },
                                 columnStyles: {
-                                    0: { cellWidth: 10 },
-                                    1: { cellWidth: 25 },
-                                    2: { cellWidth: 40 },
-                                    3: { cellWidth: 35 }, // Adjusted for shorter text
-                                    4: { cellWidth: 50 },
-                                    5: { cellWidth: 25, halign: "right" }
+                                    0: { cellWidth: 9, halign: "center" },  // ✅ Narrow "Bil" column
+                                    1: { cellWidth: 20, halign: "center" }, // ✅ Compact "Tarikh"
+                                    2: { cellWidth: 30, halign: "center" }, // ✅ "No. Kompaun" fits properly
+                                    3: { cellWidth: 30, halign: "left" },   // ✅ "Kesalahan" not too wide
+                                    4: { cellWidth: 50, halign: "center" }, // ✅ "Lokasi" aligned well
+                                    5: { cellWidth: 20, halign: "right" }   // ✅ "Jumlah" column fits neatly
                                 },
                                 theme: "grid"
                             });
 
                             // ✅ Calculate total amount
-                            let totalAmount = summonsData.reduce((sum, summon) => sum + parseFloat(summon.amount || 0), 0);
+                            let totalAmount = summonsData.reduce((sum, summon) => {
+                                let amount = (summon.amount || "0").toString().replace(/[^\d.]/g, ""); // Remove non-numeric characters
+                                return sum + (parseFloat(amount) || 0);
+                            }, 0);
                             let finalY = doc.lastAutoTable.finalY + 10;
-                            doc.text(`Jumlah Keseluruhan: RM${totalAmount.toFixed(2)}`, 145, finalY);
+                            doc.setFontSize(11);
+                            doc.setFont("helvetica", "bold");
+                            doc.text(`Jumlah Keseluruhan: RM${totalAmount ? totalAmount.toFixed(2) : "0.00"}`, 120, finalY);
 
-                            // ✅ Add Final Notice
+                            // ✅ Bold & Underlined Text for Legal Warning
                             finalY += 15;
-                            doc.text("Tuan/Puan dikehendaki menyelesaikan segala tunggakan di atas dalam tempoh 14 hari dari notis ini dikeluarkan.", 15, finalY);
-                            doc.text("Sekiranya gagal berbuat demikian, tindakan undang-undang akan diambil.", 15, finalY + 6);
+                            doc.setFont("helvetica", "normal");
+                            doc.text("Tuan/Puan dikehendaki menyelesaikan segala tunggakan-tunggakan di atas dalam", 15, finalY);
+                            doc.text("tempoh 14 hari dari notis ini dikeluarkan. Sekiranya gagal berbuat demikian, tindakan", 15, finalY + 6);
+                            doc.text("undang-undang akan diambil.Jika ada pertanyaan, sila hubungi kami di talian 03-25128282", 15, finalY + 12);
 
                             // ✅ Footer Section
-                            finalY += 18;
+                            finalY += 25;
+                            doc.setFont("helvetica", "normal");
                             doc.text("Sekian, terima kasih.", 15, finalY);
-                            doc.text("..............................................", 15, finalY + 12);
-                            doc.text("Warden Lalu Lintas", 15, finalY + 18);
-                            doc.text("No Anggota:", 15, finalY + 24);
-                            doc.text("Dewan Bandaraya Kuala Lumpur", 15, finalY + 30);
 
                             // ✅ Save the PDF
                             doc.save(`${plateNumber}_Summons.pdf`);
                         })
                         .catch(error => console.error("❌ Error fetching summons data:", error));
                 }
-
-
 
                 // 🔄 Refresh data every 5 seconds
                 setInterval(fetchData, 5000);
