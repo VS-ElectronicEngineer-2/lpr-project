@@ -34,7 +34,7 @@ if not os.path.exists(app.config["SNAPSHOT_FOLDER"]):
 PLATE_RECOGNIZER_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
 PARKING_API_URL = "https://mycouncil.citycarpark.my/parking/ctcp/services-listerner_mbk.php"
 NODE_API_URL = "http://localhost:5000/api/summons"
-API_TOKEN = "7ecbf0ad8ef53ceb2c5f00cae78d70006ed357c5"
+API_TOKEN = "51a139644fb531a54a3e45f8e231427dac23b63e"
 PARKING_API_ACTION = "GetParkingRightByPlateVerify"
 
 detected_plates = []
@@ -160,7 +160,12 @@ def check_summons_status(plate_number):
             headers={"Content-Type": "application/json"},
             timeout=5
         )
-        return response.json().get("summonsQueue", []) if response.status_code == 200 else []
+        data = response.json()
+        if isinstance(data, list):  # ✅ If API returns a list, return it directly
+            return data
+        elif isinstance(data, dict) and "summonsQueue" in data:  # ✅ Handle dictionary response
+            return data["summonsQueue"]
+        return []  # ✅ Default return if format is unexpected
     except requests.exceptions.RequestException as e:
         print(f"Summons API failed: {e}")
         return []
@@ -175,11 +180,15 @@ def process_frames():
             plates = recognize_plate(frame)
 
             for plate_data in plates:
-                plate_number = plate_data["plate"].upper()
+                plate_number = plate_data.get("plate", "").upper()  # ✅ Ensure plate_number is assigned
+
+                if not plate_number:  # ✅ Skip if no plate is detected
+                    print("⚠️ No plate detected, skipping...")
+                    continue  
 
                 with lock:
                     if any(p["plate"] == plate_number for p in detected_plates):
-                        continue
+                        continue  # ✅ Avoid duplicate entries
 
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
                 snapshot_name = f"{plate_number}_{int(time.time())}.jpg"
@@ -201,15 +210,17 @@ def process_frames():
 
                 with lock:
                     detected_plates.append({
-                        "plate": plate_number,
+                        "plate": plate_number,  # ✅ This is now properly defined
                         "status": parking_status,
                         "summons": summons_status,
                         "time": timestamp,
                         "snapshot": snapshot_path,
                         "latitude": latitude,  # ✅ Include GPS data
                         "longitude": longitude,  # ✅ Include GPS data
-                        "officer_id": officer_id # ✅ Include Officer ID
+                        "officer_id": officer_id  # ✅ Include Officer ID
                     })
+
+    print(f"✅ Added Detected Plate: {detected_plates[-1]}")  # 🔍 Debugging log
 
 threading.Thread(target=process_frames, daemon=True).start()
 
@@ -250,6 +261,8 @@ def plates():
         for plate in detected_plates:
             if "officer_id" not in plate:
                 plate["officer_id"] = stored_officer_id  # ✅ Ensure officer_id is present
+        
+        print(f"📤 Sending Detected Plates to Frontend: {detected_plates}")  # 🔍 Debugging log
         return jsonify(list(reversed(detected_plates)))  # Reverse order to show latest first
 
 @app.route("/api/user", methods=["GET"])
@@ -264,6 +277,7 @@ def get_user():
 def get_summons():
     global summons_data
     unique_summons = {}
+
     with lock:
         for plate in detected_plates:
             summons_status = check_summons_status(plate["plate"])
@@ -273,11 +287,13 @@ def get_summons():
                         summon["latitude"] = plate["latitude"]
                         summon["longitude"] = plate["longitude"]
                         summon["snapshot"] = plate["snapshot"]
-                        summon["officer_id"] = plate.get("officer_id", stored_officer_id)  # ✅ Ensure officer_id is included
+                        summon["officer_id"] = plate.get("officer_id", stored_officer_id)  
                         unique_summons[summon["noticeNo"]] = summon
 
     summons_data = list(unique_summons.values())  # Store summons globally
-    return jsonify(list(reversed(summons_data)))  # Reverse to show latest first
+    
+    print("📌 API Returning Summons Data:", summons_data)  # ✅ Debugging log
+    return jsonify(summons_data)  # Reverse to show latest first
 
 @app.route("/download/excel/detected_plates", methods=["GET"])
 def download_detected_plates_excel():
@@ -439,6 +455,27 @@ def receive_gps():
 @app.route("/api/gps/logs", methods=["GET"])
 def get_gps_logs():
     return jsonify(gps_data_log)  # Return logged GPS data
+
+@app.route("/api/payment/generate-qr", methods=["POST"])
+def generate_qr():
+    data = request.json
+    if not data or "totalAmount" not in data:
+        return jsonify({"error": "Missing totalAmount"}), 400
+    
+    total_amount = data["totalAmount"]
+    
+    # ✅ Simulate a QR Code URL (Replace with actual QR generation logic)
+    qr_code_url = f"https://paymentgateway.com/pay?amount={total_amount}"
+    
+    return jsonify({"qrCode": qr_code_url})
+
+@app.route("/gps-tracking", methods=["GET"])
+def get_gps_tracking():
+    if gps_logs:
+        latest_gps = gps_logs[-1]  # ✅ Get last received GPS log
+        return jsonify(latest_gps)
+    return jsonify({"error": "No GPS data available"}), 404  # ✅ Return proper error message
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=False)

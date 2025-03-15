@@ -260,11 +260,23 @@
             display: block;
             /* Ensure it's visible */
         }
+
+        /* ✅ Ensure the tracking map is visible */
+        #trackingMap {
+            height: 500px;
+            width: 100%;
+            min-width: 500px;
+            max-width: 1200px;
+            margin: auto;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            display: block;
+        }
     </style>
 
     <!-- 🔹 Leaflet.js (for the Map) -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
     <head>
         ...
@@ -335,6 +347,13 @@
             <div id="map"></div> <!-- 🔹 Map div should be here -->
         </div>
 
+        <!-- Tracking Map Section -->
+        <div id="tracking" class="section">
+            <h2>Tracking Map</h2>
+            <div id="trackingMap" style="height: 500px; width: 100%; max-width: 1200px;"></div>
+        </div>
+
+
         <!-- Live Stream Section -->
         <div id="livestream" class="section">
             <h2>Live Stream</h2>
@@ -383,23 +402,30 @@
 
                     if (sectionId === 'dispatch-map') {
                         setTimeout(() => {
-                            initializeMap();  // 🔹 Initialize the map once
-                            updateMap();  // 🔹 Ensure it resizes properly
-                        }, 300); // 🔹 Small delay ensures the section is visible before updating the map
+                            initializeMap(); // 🔹 Ensure map initializes once
+                            updateMap(); // 🔹 Update with latest plate markers
+                        }, 300);
+                    }
+
+                    if (sectionId === 'tracking') {
+                        initializeTrackingMap();
+                        setInterval(updateTrackingMap, 5000); // Fetch GPS updates every 5 sec
                     }
                 }
 
-                let map; // Declare the map variable globally
 
-                // 🔹 STEP 2: Initialize the Map Only Once
+                let map;  // 🔹 Ensure `map` is declared globally
+
                 function initializeMap() {
-                    if (!map) { // 🔹 Prevents multiple map creations
-                        map = L.map('map').setView([3.1390, 101.6869], 12);
+                    if (!map) {  // Prevents multiple instances
+                        map = L.map('map').setView([3.1390, 101.6869], 13); // Default center: Kuala Lumpur
+
                         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                             attribution: '&copy; OpenStreetMap contributors'
                         }).addTo(map);
                     }
                 }
+
 
                 // 🔹 STEP 3: Ensure the Map Updates When Displayed
                 function updateMap() {
@@ -428,15 +454,15 @@
                     fetch("/plates")  // Fetch detected plates from API
                         .then(response => response.json())
                         .then(detectedPlates => {
-                            return fetch("/summons")
+                            return fetch("/summons")  // Fetch summons data
                                 .then(response => response.json())
                                 .then(summonsData => {
                                     console.log("📌 Detected Plates:", detectedPlates);
                                     console.log("📌 Summons Data:", summonsData);
 
-                                    // Remove old markers
+                                    // ✅ Remove old markers before adding new ones
                                     Object.values(plateMarkers).forEach(marker => map.removeLayer(marker));
-                                    plateMarkers = {}; // Clear markers
+                                    plateMarkers = {};
 
                                     detectedPlates.forEach(plate => {
                                         const { plate: plateNo, latitude, longitude, status, snapshot, time, officer_id } = plate;
@@ -446,14 +472,16 @@
                                             return;
                                         }
 
+                                        console.log(`🚗 Adding Marker: ${plateNo} at [${latitude}, ${longitude}]`);
+
+
                                         // ✅ Check if this plate has an outstanding summons
                                         let isScofflaw = summonsData.some(summon => summon.plate === plateNo);
 
-                                        // ✅ Set the correct colors
+                                        // ✅ Assign colors based on status
                                         let borderColor, markerColor;
-                                        let lowerCaseStatus = status.toLowerCase().trim(); // Normalize case & remove spaces
+                                        let lowerCaseStatus = status.toLowerCase().trim();
 
-                                        // ✅ Prioritize Scofflaw FIRST
                                         if (isScofflaw) {
                                             borderColor = "blue";  // 🔵 Scofflaw
                                             markerColor = "blue";
@@ -464,25 +492,25 @@
                                             borderColor = "red";  // 🔴 Not Paid
                                             markerColor = "red";
                                         } else {
-                                            borderColor = "gray";  // ⚪ Default unknown status
+                                            borderColor = "gray";  // ⚪ Unknown
                                             markerColor = "gray";
                                         }
 
                                         // ✅ Debugging log
-                                        console.log(`🚗 Plate: ${plateNo} | Status: ${status} | Scofflaw: ${isScofflaw} | Assigned Color: ${borderColor}`);
+                                        console.log(`🚗 Plate: ${plateNo} | Status: ${status} | Scofflaw: ${isScofflaw} | Color: ${borderColor}`);
 
-                                        // ✅ Custom marker icon with dynamic color
+                                        // ✅ Custom marker with color
                                         let customIcon = L.divIcon({
                                             className: "custom-marker",
                                             html: `<div style="background-color:${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white;"></div>`,
                                             iconSize: [20, 20]
                                         });
 
-                                        // ✅ Add marker with proper color
+                                        // ✅ Add marker with popups
                                         let marker = L.marker([latitude, longitude], { icon: customIcon }).addTo(map);
                                         plateMarkers[plateNo] = marker;
 
-                                        // ✅ Full background color for popup
+                                        // ✅ Popup content (background color for readability)
                                         let popupContent = `
                             <div style="width:250px; background-color:${borderColor}; color:white; border-radius: 10px; padding: 10px;">
                                 <strong>Plate:</strong> ${plateNo}<br>
@@ -740,6 +768,60 @@
                             doc.save(`${plateNumber}_Summons.pdf`);
                         })
                         .catch(error => console.error("❌ Error fetching summons data:", error));
+                }
+
+                let trackingMap;
+                let vehicleMarker;
+                let routePolyline;
+                let trackingCoords = [];
+
+                function initializeTrackingMap() {
+                    if (!trackingMap) {
+                        trackingMap = L.map("trackingMap").setView([3.139, 101.6869], 13);
+
+                        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                            attribution: '&copy; OpenStreetMap contributors'
+                        }).addTo(trackingMap);
+                    }
+                }
+
+                function updateTrackingMap() {
+                    fetch("/gps-tracking")  // ✅ Fetch GPS tracking data from the backend
+                        .then(response => {
+                            if (!response.ok) throw new Error("Failed to fetch GPS data");
+                            return response.json();
+                        })
+                        .then(data => {
+                            if (!data.latitude || !data.longitude) {
+                                console.warn("🚨 No valid GPS data received");
+                                return;
+                            }
+
+                            let { latitude, longitude, start_time, idle_time, end_time } = data;
+                            trackingCoords.push([latitude, longitude]);
+
+                            let popupContent = `
+                <b>Vehicle Location</b><br>
+                <b>Start Time:</b> ${start_time || "N/A"}<br>
+                <b>Idle Time:</b> ${idle_time || "N/A"}<br>
+                <b>End Time:</b> ${end_time || "Still Running"}<br>
+            `;
+
+                            if (!vehicleMarker) {
+                                vehicleMarker = L.marker([latitude, longitude]).addTo(trackingMap)
+                                    .bindPopup(popupContent).openPopup();
+                            } else {
+                                vehicleMarker.setLatLng([latitude, longitude]).bindPopup(popupContent).openPopup();
+                            }
+
+                            if (trackingCoords.length > 1) {
+                                if (routePolyline) {
+                                    trackingMap.removeLayer(routePolyline);
+                                }
+                                routePolyline = L.polyline(trackingCoords, { color: "blue" }).addTo(trackingMap);
+                            }
+                        })
+                        .catch(error => console.error("❌ Error fetching GPS data:", error));
                 }
 
                 // 🔄 Refresh data every 5 seconds
