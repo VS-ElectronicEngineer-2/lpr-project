@@ -1,6 +1,9 @@
 const express = require("express");
 const axios = require("axios");
 const xml2js = require("xml2js");
+const path = require("path");
+const fs = require("fs");
+
 
 const router = express.Router();
 const API_URL = "https://prm.citycarpark.my/CCP_ArchService/MessageGateway.svc";
@@ -93,5 +96,61 @@ router.post("/", async (req, res) => {
         res.status(500).json({ error: "Failed to fetch summons data." });
     }
 });
+
+router.get("/download-pdf", async (req, res) => {
+    const { plate } = req.query;
+
+    if (!plate) {
+        return res.status(400).json({ error: "Vehicle number is required" });
+    }
+
+    console.log(`📥 Generating PDF for plate: ${plate}`);
+
+    // **Fetch summons data (Use Your Stored Data)**
+    const summonsList = [
+        {
+            noticeNo: "KN0802400002",
+            plate: "DCL12",
+            offence: "PERINTAH 30(c)",
+            location: "JALAN BUKIT SETONGKOL 7",
+            date: "2024-12-31",
+            status: "Unpaid",
+            amount: 300,
+        },
+        {
+            noticeNo: "KN0742400189",
+            plate: "DCL12",
+            offence: "PERINTAH 4",
+            location: "JALAN MAT KILAU",
+            date: "2024-12-24",
+            status: "Unpaid",
+            amount: 300,
+        },
+    ];
+
+    const pdfPath = path.join(__dirname, `summons_${plate}.pdf`);
+
+    try {
+        await generateSummonsPDF(plate, summonsList, pdfPath);
+
+        // **Send PDF File as Response**
+        res.download(pdfPath, `summons_${plate}.pdf`, (err) => {
+            if (err) {
+                console.error("❌ Error sending PDF:", err);
+                res.status(500).json({ error: "Failed to generate PDF" });
+            }
+
+            // **Delete the file after download to free storage**
+            setTimeout(() => {
+                fs.unlinkSync(pdfPath);
+                console.log(`🗑️ Deleted: ${pdfPath}`);
+            }, 5000);
+        });
+    } catch (error) {
+        console.error("❌ PDF Generation Error:", error);
+        res.status(500).json({ error: "Failed to generate PDF" });
+    }
+});
+
 
 module.exports = router;

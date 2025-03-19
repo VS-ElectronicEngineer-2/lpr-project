@@ -8,16 +8,22 @@ const PAYMENT_GATEWAY_URL = "http://220.158.208.216:3000/payment/public/lpr/gene
 
 // 🔹 API: Generate Payment QR
 router.post("/generate-qr", ensureValidToken, async (req, res) => {
-    const { totalAmount } = req.body;
+    const { summons, totalAmount } = req.body;
 
     if (!totalAmount || totalAmount <= 0) {
         return res.status(400).json({ error: "Invalid payment amount" });
     }
 
+    if (!Array.isArray(summons) || summons.length === 0) {
+        return res.status(400).json({ error: "No summons selected for payment" });
+    }
+
     try {
         console.log("📤 Sending Payment Request...");
+
         const paymentRequestData = {
-            order_number: `order_${Date.now()}`,
+            order_output: "online",  // ✅ Added order_output (Required field)
+            order_number: `summons_${Date.now()}`,
             override_existing_unprocessed_order_no: "YES",
             order_amount: totalAmount.toFixed(2),
             validity_qr: "99999",
@@ -28,6 +34,8 @@ router.post("/generate-qr", ensureValidToken, async (req, res) => {
             language: "en_us",
             whatsapp_template_id: "payment_qr"
         };
+
+        console.log("📩 Payment API Request:", paymentRequestData);
 
         const response = await axios.post(PAYMENT_GATEWAY_URL, paymentRequestData, {
             headers: {
@@ -46,9 +54,12 @@ router.post("/generate-qr", ensureValidToken, async (req, res) => {
 
         res.json({ paymentUrl, qrCode: paymentUrl });
     } catch (error) {
-        console.error("❌ Error Processing Payment:", error.message);
+        console.error("❌ Error Processing Payment:", error.response?.data || error.message);
         res.status(500).json({ error: "Failed to generate QR code." });
     }
 });
 
 module.exports = router;
+
+
+

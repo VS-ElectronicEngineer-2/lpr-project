@@ -34,7 +34,7 @@ if not os.path.exists(app.config["SNAPSHOT_FOLDER"]):
 PLATE_RECOGNIZER_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
 PARKING_API_URL = "https://mycouncil.citycarpark.my/parking/ctcp/services-listerner_mbk.php"
 NODE_API_URL = "http://localhost:5000/api/summons"
-API_TOKEN = "51a139644fb531a54a3e45f8e231427dac23b63e"
+API_TOKEN = "c9b4b419d2f33e6d213cc4b57eafa3e5cf0fb2e8"
 PARKING_API_ACTION = "GetParkingRightByPlateVerify"
 
 detected_plates = []
@@ -479,7 +479,6 @@ def get_gps_tracking():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=False)
-
 
 
 
