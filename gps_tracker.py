@@ -10,7 +10,7 @@ API_URL = "http://localhost:5001/api/gps"
 
 # Movement tracking thresholds (in seconds and km/h)
 IDLE_THRESHOLD = 60   # Time before considering the vehicle idle
-END_THRESHOLD = 200   # Time before considering the trip ended
+END_THRESHOLD = 1000   # Time before considering the trip ended
 SPEED_THRESHOLD = 10   # Speed threshold (km/h) to determine movement
 
 # Initialize tracking variables
