@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, send_from_directory
 import os
 from picamera2 import Picamera2
 import cv2
@@ -119,6 +119,10 @@ def generate_report():
         return send_file(output, mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", as_attachment=True, download_name="detected_plates.xlsx")
     
     return jsonify({"error": "No detected plates available"}), 400
+
+@app.route('/static/snapshots/<path:filename>')
+def serve_snapshot(filename):
+    return send_from_directory(os.path.join(app.root_path, "static/snapshots"), filename)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=True)

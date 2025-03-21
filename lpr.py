@@ -34,7 +34,7 @@ if not os.path.exists(app.config["SNAPSHOT_FOLDER"]):
 PLATE_RECOGNIZER_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
 PARKING_API_URL = "https://mycouncil.citycarpark.my/parking/ctcp/services-listerner_mbk.php"
 NODE_API_URL = "http://localhost:5000/api/summons"
-API_TOKEN = "c9b4b419d2f33e6d213cc4b57eafa3e5cf0fb2e8"
+API_TOKEN = "c1449f1c2daac9668fdd4c00afbb70b142588e03"
 PARKING_API_ACTION = "GetParkingRightByPlateVerify"
 
 detected_plates = []
