@@ -23,7 +23,7 @@ router.post("/generate-qr", ensureValidToken, async (req, res) => {
 
         const paymentRequestData = {
             order_output: "online",  // ✅ Added order_output (Required field)
-            order_number: `summons_${Date.now()}`,
+            order_number: `S${Date.now().toString().slice(-12)}`,  // Always ≤ 13 chars
             override_existing_unprocessed_order_no: "YES",
             order_amount: totalAmount.toFixed(2),
             validity_qr: "99999",

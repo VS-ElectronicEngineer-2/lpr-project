@@ -301,6 +301,131 @@
             background: #031d67;
             color: white;
         }
+
+        /* ✅ Page Title */
+        .page-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #031d67;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        #summons-payment.fullscreen {
+            width: 100vw;
+            height: 100vh;
+            padding-top: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            /* 👈 push content towards the top */
+            background-color: #ffffff;
+            gap: 20px;
+            /* spacing between elements */
+        }
+
+        .summons-header.center-only {
+            justify-content: center;
+            margin-top: 10px;
+            margin-bottom: 10px;
+        }
+
+
+        /* ✅ Summons Section Header */
+        .summons-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        /* ✅ Summons List Container */
+        .summons-list-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+        }
+
+        /* ✅ Summons Card */
+        .summons-card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+            border-left: 5px solid #031d67;
+            width: 320px;
+            transition: 0.3s ease-in-out;
+        }
+
+        .summons-card:hover {
+            box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        /* ✅ Summons Card Headings */
+        .summons-card h3 {
+            font-size: 16px;
+            font-weight: bold;
+            color: #031d67;
+            margin-bottom: 5px;
+        }
+
+        /* ✅ Summons Card Paragraph */
+        .summons-card p {
+            font-size: 14px;
+            color: #444;
+            margin: 3px 0;
+        }
+
+        /* ✅ Checkbox Styling */
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* ✅ Action Buttons */
+        .summons-actions {
+            margin-top: 20px;
+            justify-content: center;
+            display: flex;
+        }
+
+
+        /* ✅ Button Styles */
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            border-radius: 8px;
+            transition: 0.3s ease-in-out;
+        }
+
+        .pay-btn {
+            background: #008CBA;
+            color: white;
+        }
+
+        .export-btn {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.8;
+        }
+
+        /* ✅ QR Code Display */
+        .qrcode-container {
+            margin-top: 15px;
+            text-align: center;
+        }
     </style>
 
     <!-- ✅ Add Google Maps API -->
@@ -324,6 +449,10 @@
     </head>
 
 </head>
+
+<body id="mainBody">
+
+</body>
 
 <body>
 
@@ -413,13 +542,21 @@
 
     <!-- ✅ Summons Payment Section -->
     <div id="summons-payment" class="section">
-        <h2>Summons Payment</h2>
-        <h3>Summons Details for: <span id="plateNumber"></span></h3>
+        <h2 class="page-title">Summons Payment</h2>
 
-        <ul id="summonsList"></ul>
+        <div class="summons-header center-only">
+            <h3>Summons Details for: <span id="plateNumber"></span></h3>
+        </div>
 
-        <button class="btn start-btn" onclick="generatePaymentQR()">Pay Selected</button>
-        <div id="paymentQRCode"></div>
+
+        <!-- ✅ Summons Cards Container -->
+        <div class="summons-list-container" id="summonsList"></div>
+
+        <!-- ✅ Action Buttons -->
+        <div class="summons-actions">
+            <button class="btn pay-btn" onclick="generatePaymentQR()">💳 Pay Selected</button>
+            <div id="paymentQRCode" class="qrcode-container"></div>
+        </div>
     </div>
 
     <!-- Live Stream Section -->
@@ -895,7 +1032,7 @@
                         // ✅ Generate QR Code for Summons Page
                         console.log("🔄 Generating QR Code...");
 
-                        const qrCodeURL = `http://192.168.8.108:5000/queue-summons?plate=${plateNumber}`;
+                        const qrCodeURL = `http://192.168.8.108:5001/queue-summons?plate=${plateNumber}`;
 
                         try {
                             let tempDiv = document.createElement("div"); // Temporary div for QR code generation
@@ -1062,47 +1199,83 @@
                 setInterval(updateTracking, 5000);
             };
 
-            let summonsData = [];
             let plateNumber = new URLSearchParams(window.location.search).get("plate");
 
-            // ✅ Show plate number on the page
-            document.getElementById("plateNumber").innerText = plateNumber;
+            document.addEventListener("DOMContentLoaded", function () {
+                const urlParams = new URLSearchParams(window.location.search);
+                const plateNumber = urlParams.get("plate");
+                const view = urlParams.get("view");
 
-            // ✅ Fetch summons list from API
-            fetch(`/summons?plate=${plateNumber}`)
-                .then(response => response.json())
-                .then(data => {
-                    summonsData = data;
-                    let list = document.getElementById("summonsList");
+                if (plateNumber) {
+                    document.getElementById("plateNumber").innerText = plateNumber;
+                    fetchSummonsData(plateNumber);
 
-                    // ✅ Populate the summons list with checkboxes
-                    data.forEach((summons, index) => {
-                        let item = document.createElement("li");
-                        item.innerHTML = `
-                    <input type="checkbox" id="summon_${index}" value="${summons.noticeNo}" data-amount="${summons.amount}">
-                    <label for="summon_${index}"> ${summons.noticeNo} - ${summons.offence} - RM${summons.amount}</label>
+                    if (view === "summons-payment") {
+                        showSection("summons-payment");
+
+                        // ✅ Hide Sidebar + Topbar for clean QR view
+                        document.querySelector(".sidebar").style.display = "none";
+                        document.querySelector(".topbar").style.display = "none";
+                        document.getElementById("mainBody").style.background = "#ffffff"; // Optional white background
+                        document.getElementById("summons-payment").classList.add("fullscreen");
+                    }
+                }
+            });
+
+            function fetchSummonsData(plateNumber) {
+                console.log("🚀 Fetching summons for plate:", plateNumber);
+
+                fetch(`/summons?plate=${plateNumber}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        let listContainer = document.getElementById("summonsList");
+                        listContainer.innerHTML = ""; // Clear previous results
+
+                        if (!data.length) {
+                            console.warn("🚨 No summons found for this plate:", plateNumber);
+                            listContainer.innerHTML = "<p>No summons found for this plate.</p>";
+                            return;
+                        }
+
+                        data.forEach((summons, index) => {
+                            console.log(`✅ Creating card for Notice No: ${summons.noticeNo}`);
+
+                            let card = document.createElement("div");
+                            card.classList.add("summons-card");
+
+                            card.innerHTML = `
+                    <div class="checkbox-container">
+                        <input type="checkbox" id="summon_${index}" value="${summons.noticeNo}" data-amount="${summons.amount}">
+                        <h3>Notice No.: ${summons.noticeNo}</h3>
+                    </div>
+                    <p><strong>Vehicle No.:</strong> ${plateNumber}</p>
+                    <p><strong>Offences Act:</strong> ${summons.offence}</p>
+                    <p><strong>Offences Date:</strong> ${summons.date}</p>
+                    <p><strong>Amount:</strong> RM${summons.amount}</p>
                 `;
-                        list.appendChild(item);
-                    });
-                });
+
+                            listContainer.appendChild(card);
+                        });
+
+                        console.log("✅ Summons list updated successfully.");
+                    })
+                    .catch(error => console.error("❌ Error fetching summons data:", error));
+            }
 
             function generatePaymentQR() {
                 let selectedSummons = [];
                 let totalAmount = 0;
 
-                // ✅ Get all selected summons
-                document.querySelectorAll("input[type=checkbox]:checked").forEach((checkbox) => {
+                document.querySelectorAll("input[type=checkbox]:checked").forEach(checkbox => {
                     selectedSummons.push(checkbox.value);
                     totalAmount += parseFloat(checkbox.getAttribute("data-amount"));
                 });
 
-                // ✅ Validate selection
                 if (selectedSummons.length === 0) {
                     alert("Please select at least one summons.");
                     return;
                 }
 
-                // ✅ Send request to generate payment QR
                 fetch("/api/payment/generate-qr", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -1121,6 +1294,10 @@
                         }
                     })
                     .catch(error => console.error("Payment Error:", error));
+            }
+
+            function exportToPDF() {
+                alert("🚀 PDF Export functionality coming soon!");
             }
 
             // 🔄 Refresh data every 5 seconds

@@ -34,7 +34,7 @@ if not os.path.exists(app.config["SNAPSHOT_FOLDER"]):
 PLATE_RECOGNIZER_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
 PARKING_API_URL = "https://mycouncil.citycarpark.my/parking/ctcp/services-listerner_mbk.php"
 NODE_API_URL = "http://localhost:5000/api/summons"
-API_TOKEN = "c1449f1c2daac9668fdd4c00afbb70b142588e03"
+API_TOKEN = "31dec082ba6a3f72b16236de19f32d1559d743c9"
 PARKING_API_ACTION = "GetParkingRightByPlateVerify"
 
 detected_plates = []
@@ -459,15 +459,33 @@ def get_gps_logs():
 @app.route("/api/payment/generate-qr", methods=["POST"])
 def generate_qr():
     data = request.json
-    if not data or "totalAmount" not in data:
-        return jsonify({"error": "Missing totalAmount"}), 400
-    
+    if not data or "totalAmount" not in data or "summons" not in data:
+        return jsonify({"error": "Missing required data"}), 400
+
     total_amount = data["totalAmount"]
-    
-    # ✅ Simulate a QR Code URL (Replace with actual QR generation logic)
-    qr_code_url = f"https://paymentgateway.com/pay?amount={total_amount}"
-    
-    return jsonify({"qrCode": qr_code_url})
+    summons = data["summons"]
+
+    try:
+        response = requests.post(
+            "http://localhost:5000/api/payment/generate-qr",  # ✅ Node.js API endpoint
+            json={
+                "totalAmount": total_amount,
+                "summons": summons
+            },
+            headers={
+                "Content-Type": "application/json",
+                "Authorization": "2c76ee72a2e68a54e6e73ba360c6f1f41de42cb8c2235f645705ce1f834d7122"  # ✅ Replace with your actual token if needed
+            },
+            timeout=10
+        )
+
+        print("📥 Payment API Response:", response.text)
+        return jsonify(response.json()), response.status_code
+
+    except requests.exceptions.RequestException as e:
+        print("❌ Payment request failed:", e)
+        return jsonify({"error": "Failed to generate payment QR"}), 500
+
 
 @app.route("/gps-tracking", methods=["GET"])
 def get_gps_tracking():
@@ -476,10 +494,19 @@ def get_gps_tracking():
         return jsonify(latest_gps)
     return jsonify({"error": "No GPS data available"}), 404  # ✅ Return proper error message
 
+@app.route("/queue-summons")
+def redirect_to_dashboard_summons():
+    plate = request.args.get("plate")
+
+    if not plate:
+        return "Missing plate number", 400
+
+    return redirect(f"/?plate={plate}&view=summons-payment")
+
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=False)
-
 
 
 
