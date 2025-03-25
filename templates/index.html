@@ -514,240 +514,281 @@
         <div id="tracking" class="section">
             <h2>Tracking Map</h2>
 
-            <!-- 🔹 Search Feature for Tracking -->
-            <div class="tracking-search">
-                <input type="text" id="plateSearch" placeholder="Enter Plate Number...">
-                <button class="btn search-btn" onclick="searchTrackingData()">Search</button>
-                <button class="btn clear-btn" onclick="clearTrackingSearch()">Clear</button>
+            <!-- 🔘 Switch Tabs -->
+            <div style="margin-bottom: 20px;">
+                <button class="btn start-btn" onclick="showTrackingTab('live')">📡 Live Tracking</button>
+                <button class="btn stop-btn" onclick="showTrackingTab('history')">🕓 Historical Playback</button>
             </div>
 
-            <div id="trackingMap" style="height: 500px; width: 100%; max-width: 1200px;"></div>
+            <!-- 🔵 LIVE TRACKING TAB -->
+            <div id="liveTrackingTab">
+                <h3>📡 Real-Time GPS Tracking</h3>
+                <div id="liveTrackingMap" style="height: 500px; width: 100%; max-width: 1200px; margin: auto;"></div>
 
-            <div class="tracking-table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Time</th>
-                            <th>Latitude</th>
-                            <th>Longitude</th>
-                            <th>Speed (km/h)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="trackingTable"></tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-    </div>
-
-    <!-- ✅ Summons Payment Section -->
-    <div id="summons-payment" class="section">
-        <h2 class="page-title">Summons Payment</h2>
-
-        <div class="summons-header center-only">
-            <h3>Summons Details for: <span id="plateNumber"></span></h3>
-        </div>
-
-
-        <!-- ✅ Summons Cards Container -->
-        <div class="summons-list-container" id="summonsList"></div>
-
-        <!-- ✅ Action Buttons -->
-        <div class="summons-actions">
-            <button class="btn pay-btn" onclick="generatePaymentQR()">💳 Pay Selected</button>
-            <div id="paymentQRCode" class="qrcode-container"></div>
-        </div>
-    </div>
-
-    <!-- Live Stream Section -->
-    <div id="livestream" class="section">
-        <h2>Live Stream</h2>
-
-        <div class="live-container">
-            <!-- ✅ Left Section: Live Stream Video -->
-            <div class="live-video-container">
-                <img id="liveStreamVideo" src="/video_feed" class="live-video" alt="Live Stream">
-
-                <!-- ✅ Start & Stop Buttons BELOW the live stream -->
-                <div class="button-container">
-                    <button class="btn start-btn" onclick="startLiveStream()">Start</button>
-                    <button class="btn stop-btn" onclick="stopLiveStream()">Stop</button>
+                <div class="tracking-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Latitude</th>
+                                <th>Longitude</th>
+                                <th>Speed (km/h)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="liveTrackingTable"></tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- ✅ Right Section: Detected Plates Table -->
-            <div class="dashboard-card">
-                <h3>Detected Plates & Summons Queue (Live)</h3>
-                <table>
-                    <thead>
-                        <tr>
-                            <th>#</th> <!-- New column for queue number -->
-                            <th>License Plate</th>
-                            <th>Status</th>
-                            <th>Time</th>
-                            <th>Total Summons</th> <!-- New column for Scofflaw Summons No -->
-                            <th>Action</th> <!-- New column for Download Button -->
-                        </tr>
-                    </thead>
-                    <tbody id="livestreamTable"></tbody>
-                </table>
+            <!-- 🟠 HISTORICAL PLAYBACK TAB -->
+            <div id="historicalTrackingTab" style="display: none;">
+                <div style="margin-bottom: 10px; text-align:center;">
+                    <input type="date" id="startDate"> to
+                    <input type="date" id="endDate">
+                    <button class="btn export-btn" onclick="exportPlaybackToExcel()">📄 Export to Excel</button>
+                </div>
+
+                <h3>🕓 Historical GPS Playback</h3>
+                <div class="tracking-search">
+                    <input type="text" id="plateSearch" placeholder="Enter Plate Number...">
+                    <button class="btn search-btn" onclick="searchTrackingData()">Search</button>
+                    <button class="btn search-btn" onclick="clearTrackingSearch()">Clear</button>
+                </div>
+
+                <div id="historicalTrackingMap" style="height: 500px; width: 100%; max-width: 1200px; margin: auto;">
+                </div>
+
+                <div class="button-container" style="margin-top: 15px;">
+                    <button class="btn start-btn" onclick="startPlayback(playbackData, 1000)">▶️ Play</button>
+                    <button class="btn stop-btn" onclick="pausePlayback()">⏸ Pause</button>
+                    <button class="btn stop-btn" onclick="stopPlayback()">⏹ Stop</button>
+                </div>
+
+                <div class="tracking-table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Latitude</th>
+                                <th>Longitude</th>
+                                <th>Speed (km/h)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historicalTrackingTable"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- 🔹 JavaScript -->
-        <script>
-            function showSection(sectionId) {
-                document.querySelectorAll('.section').forEach(section => {
-                    section.classList.toggle('active', section.id === sectionId);
-                });
 
-                if (sectionId === 'dashboard') {
-                    fetchDashboardData();
-                }
+        <!-- ✅ Summons Payment Section -->
+        <div id="summons-payment" class="section">
+            <h2 class="page-title">Summons Payment</h2>
 
-                if (sectionId === 'dispatch-map') {
-                    setTimeout(() => {
-                        if (dispatchMap) {
-                            google.maps.event.trigger(dispatchMap, "resize");
-                            fetchPlatesAndSummons(); // ✅ Refresh markers on dispatch map
-                        } else {
-                            initDispatchMap(); // ✅ Initialize if not already initialized
-                        }
-                    }, 300);
-                }
-
-                if (sectionId === 'tracking') {
-                    setTimeout(() => {
-                        initializeTrackingMap();  // Initialize map
-                        trackingMap.invalidateSize();  // 🔹 Fix map loading issue
-                        setInterval(updateTracking, 5000); // Fetch GPS updates every 5 sec
-                    }, 300); // Add delay to allow section to render first
-                }
-            }
-
-            // ✅ Refresh Dispatch Map Data Every 5 Seconds
-            setInterval(fetchPlatesAndSummons, 5000);
-
-            let dispatchMap;
-            let dispatchMarkers = [];
-
-            function initDispatchMap() {
-                let dispatchMapDiv = document.getElementById("map");
-
-                if (!dispatchMapDiv) {
-                    console.error("🚨 Dispatch Map div not found!");
-                    return;
-                }
-
-                dispatchMap = new google.maps.Map(dispatchMapDiv, {
-                    center: { lat: 3.1390, lng: 101.6869 }, // Default Kuala Lumpur
-                    zoom: 13,
-                    mapTypeId: "roadmap"
-                });
+            <div class="summons-header center-only">
+                <h3>Summons Details for: <span id="plateNumber"></span></h3>
+            </div>
 
 
-                console.log("✅ Dispatch Map Initialized");
+            <!-- ✅ Summons Cards Container -->
+            <div class="summons-list-container" id="summonsList"></div>
 
-                fetchPlatesAndSummons(); // ✅ Fetch detected plates & summons
-            }
+            <!-- ✅ Action Buttons -->
+            <div class="summons-actions">
+                <button class="btn pay-btn" onclick="generatePaymentQR()">💳 Pay Selected</button>
+                <div id="paymentQRCode" class="qrcode-container"></div>
+            </div>
+        </div>
 
-            // ✅ Initialize Tracking Map
-            function initTrackingMap() {
-                let trackingMapDiv = document.getElementById("trackingMap");
+        <!-- Live Stream Section -->
+        <div id="livestream" class="section">
+            <h2>Live Stream</h2>
 
-                if (!trackingMapDiv) {
-                    console.error("🚨 Tracking Map div not found!");
-                    return;
-                }
+            <div class="live-container">
+                <!-- ✅ Left Section: Live Stream Video -->
+                <div class="live-video-container">
+                    <img id="liveStreamVideo" src="/video_feed" class="live-video" alt="Live Stream">
 
-                trackingMap = new google.maps.Map(trackingMapDiv, {
-                    center: { lat: 3.139, lng: 101.6869 }, // Default Kuala Lumpur
-                    zoom: 13,
-                    mapTypeId: "roadmap"
-                });
-            }
+                    <!-- ✅ Start & Stop Buttons BELOW the live stream -->
+                    <div class="button-container">
+                        <button class="btn start-btn" onclick="startLiveStream()">Start</button>
+                        <button class="btn stop-btn" onclick="stopLiveStream()">Stop</button>
+                    </div>
+                </div>
 
+                <!-- ✅ Right Section: Detected Plates Table -->
+                <div class="dashboard-card">
+                    <h3>Detected Plates & Summons Queue (Live)</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th> <!-- New column for queue number -->
+                                <th>License Plate</th>
+                                <th>Status</th>
+                                <th>Time</th>
+                                <th>Total Summons</th> <!-- New column for Scofflaw Summons No -->
+                                <th>Action</th> <!-- New column for Download Button -->
+                            </tr>
+                        </thead>
+                        <tbody id="livestreamTable"></tbody>
+                    </table>
+                </div>
+            </div>
 
-            // 🔹 STEP 3: Ensure the Map Updates When Displayed
-            function updateMap() {
-                setTimeout(() => {
-                    if (map) {
-                        map.invalidateSize(); // 🔹 Fixes the map alignment issue
+            <!-- 🔹 JavaScript -->
+            <script>
+                function showSection(sectionId) {
+                    document.querySelectorAll('.section').forEach(section => {
+                        section.classList.toggle('active', section.id === sectionId);
+                    });
+
+                    if (sectionId === 'dashboard') {
+                        fetchDashboardData();
                     }
-                }, 500); // 🔹 Short delay to ensure it loads before resizing
-            }
 
-            let plateMarkers = {}; // Store markers to avoid duplicatio
+                    if (sectionId === 'dispatch-map') {
+                        setTimeout(() => {
+                            if (dispatchMap) {
+                                google.maps.event.trigger(dispatchMap, "resize");
+                                fetchPlatesAndSummons(); // ✅ Refresh markers on dispatch map
+                            } else {
+                                initDispatchMap(); // ✅ Initialize if not already initialized
+                            }
+                        }, 300);
+                    }
 
-            function toggleDropdown() {
-                var menu = document.getElementById("dropdown-menu");
-                menu.style.display = (menu.style.display === "block") ? "none" : "block";
-            }
-
-            // Close dropdown when clicking outside
-            window.onclick = function (event) {
-                if (!event.target.closest('.profile-container')) {
-                    document.getElementById("dropdown-menu").style.display = "none";
+                    if (sectionId === 'tracking') {
+                        setTimeout(() => {
+                            initializeTrackingMap();  // Initialize map
+                            trackingMap.invalidateSize();  // 🔹 Fix map loading issue
+                            setInterval(updateTracking, 5000); // Fetch GPS updates every 5 sec
+                        }, 300); // Add delay to allow section to render first
+                    }
                 }
-            }
 
-            function fetchPlatesAndSummons() {
-                fetch("/plates")  // Fetch detected plates from API
-                    .then(response => response.json())
-                    .then(detectedPlates => {
-                        return fetch("/summons")  // Fetch summons data
-                            .then(response => response.json())
-                            .then(summonsData => {
-                                console.log("📌 Detected Plates:", detectedPlates);
-                                console.log("📌 Summons Data:", summonsData);
+                // ✅ Refresh Dispatch Map Data Every 5 Seconds
+                setInterval(fetchPlatesAndSummons, 5000);
 
-                                // ✅ Remove previous markers
-                                dispatchMarkers.forEach(marker => marker.setMap(null));
-                                dispatchMarkers = [];
+                let dispatchMap;
+                let dispatchMarkers = [];
 
-                                detectedPlates.forEach(plate => {
-                                    if (!plate.latitude || !plate.longitude) return;
+                function initDispatchMap() {
+                    let dispatchMapDiv = document.getElementById("map");
 
-                                    let position = { lat: plate.latitude, lng: plate.longitude };
-                                    let plateNumber = plate.plate.trim().toUpperCase();
-                                    let plateStatus = plate.status.toLowerCase().trim();
+                    if (!dispatchMapDiv) {
+                        console.error("🚨 Dispatch Map div not found!");
+                        return;
+                    }
 
-                                    // ✅ Check if this plate is in summonsData
-                                    let isScofflaw = summonsData.some(summon => summon.plate.trim().toUpperCase() === plateNumber);
-
-                                    // ✅ Ensure correct image path
-                                    let imageUrl = plate.snapshot.startsWith("static/snapshots/")
-                                        ? `/${plate.snapshot}`
-                                        : `/static/snapshots/${plate.snapshot}`;
-
-                                    console.log(`📸 Image URL for ${plate.plate}: ${imageUrl}`);
+                    dispatchMap = new google.maps.Map(dispatchMapDiv, {
+                        center: { lat: 3.1390, lng: 101.6869 }, // Default Kuala Lumpur
+                        zoom: 13,
+                        mapTypeId: "roadmap"
+                    });
 
 
+                    console.log("✅ Dispatch Map Initialized");
 
-                                    // ✅ Debugging log for missing images
-                                    console.log(`📸 Image URL for ${plateNumber}: ${imageUrl}`);
+                    fetchPlatesAndSummons(); // ✅ Fetch detected plates & summons
+                }
 
-                                    // 🎨 Set Color Based on Status
-                                    let infoColor = "";
-                                    let statusText = "";
-                                    let iconUrl = "";
+                // ✅ Initialize Tracking Map
+                function initTrackingMap() {
+                    let trackingMapDiv = document.getElementById("trackingMap");
 
-                                    if (isScofflaw) {
-                                        infoColor = "blue";
-                                        statusText = "Hotlist Alert";
-                                        iconUrl = "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"; // 🔵 Scofflaw
-                                    } else if (plateStatus.includes("not paid")) {
-                                        infoColor = "red";
-                                        statusText = "Parking Rights Alert";
-                                        iconUrl = "http://maps.google.com/mapfiles/ms/icons/red-dot.png"; // 🔴 Not Paid
-                                    } else {
-                                        infoColor = "green";
-                                        statusText = "Read";
-                                        iconUrl = "http://maps.google.com/mapfiles/ms/icons/green-dot.png"; // 🟢 Paid
-                                    }
+                    if (!trackingMapDiv) {
+                        console.error("🚨 Tracking Map div not found!");
+                        return;
+                    }
 
-                                    // ✅ Construct InfoWindow Content with Image
-                                    let infoWindowContent = `
+                    trackingMap = new google.maps.Map(trackingMapDiv, {
+                        center: { lat: 3.139, lng: 101.6869 }, // Default Kuala Lumpur
+                        zoom: 13,
+                        mapTypeId: "roadmap"
+                    });
+                }
+
+
+                // 🔹 STEP 3: Ensure the Map Updates When Displayed
+                function updateMap() {
+                    setTimeout(() => {
+                        if (map) {
+                            map.invalidateSize(); // 🔹 Fixes the map alignment issue
+                        }
+                    }, 500); // 🔹 Short delay to ensure it loads before resizing
+                }
+
+                let plateMarkers = {}; // Store markers to avoid duplicatio
+
+                function toggleDropdown() {
+                    var menu = document.getElementById("dropdown-menu");
+                    menu.style.display = (menu.style.display === "block") ? "none" : "block";
+                }
+
+                // Close dropdown when clicking outside
+                window.onclick = function (event) {
+                    if (!event.target.closest('.profile-container')) {
+                        document.getElementById("dropdown-menu").style.display = "none";
+                    }
+                }
+
+                function fetchPlatesAndSummons() {
+                    fetch("/plates")  // Fetch detected plates from API
+                        .then(response => response.json())
+                        .then(detectedPlates => {
+                            return fetch("/summons")  // Fetch summons data
+                                .then(response => response.json())
+                                .then(summonsData => {
+                                    console.log("📌 Detected Plates:", detectedPlates);
+                                    console.log("📌 Summons Data:", summonsData);
+
+                                    // ✅ Remove previous markers
+                                    dispatchMarkers.forEach(marker => marker.setMap(null));
+                                    dispatchMarkers = [];
+
+                                    detectedPlates.forEach(plate => {
+                                        if (!plate.latitude || !plate.longitude) return;
+
+                                        let position = { lat: plate.latitude, lng: plate.longitude };
+                                        let plateNumber = plate.plate.trim().toUpperCase();
+                                        let plateStatus = plate.status.toLowerCase().trim();
+
+                                        // ✅ Check if this plate is in summonsData
+                                        let isScofflaw = summonsData.some(summon => summon.plate.trim().toUpperCase() === plateNumber);
+
+                                        // ✅ Ensure correct image path
+                                        let imageUrl = plate.snapshot.startsWith("static/snapshots/")
+                                            ? `/${plate.snapshot}`
+                                            : `/static/snapshots/${plate.snapshot}`;
+
+                                        console.log(`📸 Image URL for ${plate.plate}: ${imageUrl}`);
+
+
+
+                                        // ✅ Debugging log for missing images
+                                        console.log(`📸 Image URL for ${plateNumber}: ${imageUrl}`);
+
+                                        // 🎨 Set Color Based on Status
+                                        let infoColor = "";
+                                        let statusText = "";
+                                        let iconUrl = "";
+
+                                        if (isScofflaw) {
+                                            infoColor = "blue";
+                                            statusText = "Hotlist Alert";
+                                            iconUrl = "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"; // 🔵 Scofflaw
+                                        } else if (plateStatus.includes("not paid")) {
+                                            infoColor = "red";
+                                            statusText = "Parking Rights Alert";
+                                            iconUrl = "http://maps.google.com/mapfiles/ms/icons/red-dot.png"; // 🔴 Not Paid
+                                        } else {
+                                            infoColor = "green";
+                                            statusText = "Read";
+                                            iconUrl = "http://maps.google.com/mapfiles/ms/icons/green-dot.png"; // 🟢 Paid
+                                        }
+
+                                        // ✅ Construct InfoWindow Content with Image
+                                        let infoWindowContent = `
                         <div style="border: 3px solid ${infoColor}; border-radius: 8px; background: #fff; padding: 10px; text-align: center; width: 250px;">
                             <div style="background: ${infoColor}; color: white; font-weight: bold; padding: 5px; border-radius: 6px;">
                                 ${statusText}
@@ -762,98 +803,98 @@
                                  style="width: 100%; height: auto; margin-top: 5px; border-radius: 5px; border: 2px solid ${infoColor};">
                         </div>`;
 
-                                    let marker = new google.maps.Marker({
-                                        position,
-                                        map: dispatchMap,
-                                        title: `Plate: ${plateNumber}`,
-                                        icon: { url: iconUrl }
-                                    });
-
-                                    let infoWindow = new google.maps.InfoWindow({
-                                        content: infoWindowContent
-                                    });
-
-                                    marker.addListener("click", () => infoWindow.open(dispatchMap, marker));
-
-                                    // ✅ Store marker to remove later if needed
-                                    dispatchMarkers.push(marker);
-                                });
-                            });
-                    })
-                    .catch(error => console.error("❌ Error fetching plates:", error));
-            }
-
-
-            function startLiveStream() {
-                document.getElementById("liveStreamVideo").src = "/video_feed";
-            }
-
-            function stopLiveStream() {
-                document.getElementById("liveStreamVideo").src = "";
-            }
-
-            function fetchData() {
-                fetch("/plates")
-                    .then(response => response.json())
-                    .then(detectedData => {
-                        fetch("/summons")
-                            .then(response => response.json())
-                            .then(summonsData => {
-                                let livestreamTable = document.getElementById("livestreamTable");
-                                livestreamTable.innerHTML = ""; // Clear previous data
-
-                                let allPlates = []; // Store plates with queue numbers
-
-                                // Combine detected plates and summons
-                                detectedData.forEach(plate => {
-                                    allPlates.push({
-                                        plate: plate.plate,
-                                        status: plate.status,
-                                        time: plate.time,
-                                        isScofflaw: false,
-                                        summonsNo: "" // Default empty
-                                    });
-                                });
-
-                                // Mark summons plates and assign queue numbers
-                                let scofflawQueue = 1; // Start summons queue at 1
-                                summonsData.forEach(summon => {
-                                    let existing = allPlates.find(p => p.plate === summon.plate);
-                                    if (existing) {
-                                        existing.status = "Scofflaw";
-                                        existing.isScofflaw = true;
-                                        existing.summonsNo = `${scofflawQueue}`; // Assign queue number
-                                        scofflawQueue++;
-                                    } else {
-                                        allPlates.push({
-                                            plate: summon.plate,
-                                            status: "Scofflaw",
-                                            time: "N/A",
-                                            isScofflaw: true,
-                                            summonsNo: `${scofflawQueue}`
+                                        let marker = new google.maps.Marker({
+                                            position,
+                                            map: dispatchMap,
+                                            title: `Plate: ${plateNumber}`,
+                                            icon: { url: iconUrl }
                                         });
-                                        scofflawQueue++;
-                                    }
+
+                                        let infoWindow = new google.maps.InfoWindow({
+                                            content: infoWindowContent
+                                        });
+
+                                        marker.addListener("click", () => infoWindow.open(dispatchMap, marker));
+
+                                        // ✅ Store marker to remove later if needed
+                                        dispatchMarkers.push(marker);
+                                    });
                                 });
+                        })
+                        .catch(error => console.error("❌ Error fetching plates:", error));
+                }
 
-                                // Display with queue numbers
-                                allPlates.forEach((entry, index) => {
-                                    let statusColor = entry.status.includes("Not Paid") ? "red" :
-                                        entry.status.includes("Paid") ? "green" :
-                                            "blue";  // Default blue for scofflaw
 
-                                    let summonsColumn = entry.isScofflaw ? entry.summonsNo : "-"; // Show queue number for scofflaw only
+                function startLiveStream() {
+                    document.getElementById("liveStreamVideo").src = "/video_feed";
+                }
 
-                                    let actionButton = entry.isScofflaw
-                                        ? `<button onclick="generatePDF('${entry.plate}')" 
+                function stopLiveStream() {
+                    document.getElementById("liveStreamVideo").src = "";
+                }
+
+                function fetchData() {
+                    fetch("/plates")
+                        .then(response => response.json())
+                        .then(detectedData => {
+                            fetch("/summons")
+                                .then(response => response.json())
+                                .then(summonsData => {
+                                    let livestreamTable = document.getElementById("livestreamTable");
+                                    livestreamTable.innerHTML = ""; // Clear previous data
+
+                                    let allPlates = []; // Store plates with queue numbers
+
+                                    // Combine detected plates and summons
+                                    detectedData.forEach(plate => {
+                                        allPlates.push({
+                                            plate: plate.plate,
+                                            status: plate.status,
+                                            time: plate.time,
+                                            isScofflaw: false,
+                                            summonsNo: "" // Default empty
+                                        });
+                                    });
+
+                                    // Mark summons plates and assign queue numbers
+                                    let scofflawQueue = 1; // Start summons queue at 1
+                                    summonsData.forEach(summon => {
+                                        let existing = allPlates.find(p => p.plate === summon.plate);
+                                        if (existing) {
+                                            existing.status = "Scofflaw";
+                                            existing.isScofflaw = true;
+                                            existing.summonsNo = `${scofflawQueue}`; // Assign queue number
+                                            scofflawQueue++;
+                                        } else {
+                                            allPlates.push({
+                                                plate: summon.plate,
+                                                status: "Scofflaw",
+                                                time: "N/A",
+                                                isScofflaw: true,
+                                                summonsNo: `${scofflawQueue}`
+                                            });
+                                            scofflawQueue++;
+                                        }
+                                    });
+
+                                    // Display with queue numbers
+                                    allPlates.forEach((entry, index) => {
+                                        let statusColor = entry.status.includes("Not Paid") ? "red" :
+                                            entry.status.includes("Paid") ? "green" :
+                                                "blue";  // Default blue for scofflaw
+
+                                        let summonsColumn = entry.isScofflaw ? entry.summonsNo : "-"; // Show queue number for scofflaw only
+
+                                        let actionButton = entry.isScofflaw
+                                            ? `<button onclick="generatePDF('${entry.plate}')" 
        style="background: blue; color: white; border: none; padding: 5px; cursor: pointer;">
        Download PDF
     </button>`
-                                        : "-";
+                                            : "-";
 
-                                    console.log(`📥 Adding Download Button for: ${entry.plate}`); // ✅ Debugging Log
+                                        console.log(`📥 Adding Download Button for: ${entry.plate}`); // ✅ Debugging Log
 
-                                    let rowHTML = `
+                                        let rowHTML = `
     <tr>
         <td>${index + 1}</td>
         <td style="color:${statusColor}; font-weight:bold;">${entry.plate}</td>
@@ -863,33 +904,33 @@
         <td>${actionButton}</td> <!-- ✅ Ensure this is added correctly -->
     </tr>`;
 
-                                    livestreamTable.innerHTML += rowHTML;
+                                        livestreamTable.innerHTML += rowHTML;
 
+                                    });
                                 });
-                            });
-                    });
-            }
+                        });
+                }
 
-            function fetchDashboardData() {
-                fetch("/plates")
-                    .then(response => response.json())
-                    .then(detectedData => {
-                        fetch("/summons")
-                            .then(response => response.json())
-                            .then(summonsData => {
-                                let combinedTable = document.getElementById("dashboardTable");
-                                combinedTable.innerHTML = "";
+                function fetchDashboardData() {
+                    fetch("/plates")
+                        .then(response => response.json())
+                        .then(detectedData => {
+                            fetch("/summons")
+                                .then(response => response.json())
+                                .then(summonsData => {
+                                    let combinedTable = document.getElementById("dashboardTable");
+                                    combinedTable.innerHTML = "";
 
-                                detectedData.forEach(plate => {
-                                    let matchingSummons = summonsData.filter(s => s.plate === plate.plate);
-                                    let statusText = plate.status;
-                                    let statusColor = statusText.includes("Not Paid") ? "red" : "green";
-                                    if (matchingSummons.length > 0) {
-                                        statusText = "Scofflaw";
-                                        statusColor = "blue";
-                                    }
+                                    detectedData.forEach(plate => {
+                                        let matchingSummons = summonsData.filter(s => s.plate === plate.plate);
+                                        let statusText = plate.status;
+                                        let statusColor = statusText.includes("Not Paid") ? "red" : "green";
+                                        if (matchingSummons.length > 0) {
+                                            statusText = "Scofflaw";
+                                            statusColor = "blue";
+                                        }
 
-                                    combinedTable.innerHTML += `
+                                        combinedTable.innerHTML += `
                                     <tr>
                                         <td style="color:${statusColor}; font-weight:bold;">${plate.plate}</td>
                                         <td style="color:${statusColor}; font-weight:bold;">${statusText}</td>
@@ -899,351 +940,495 @@
                                         <td>${matchingSummons.map(s => s.amount).join(", ") || "N/A"}</td>
                                     </tr>
                                 `;
+                                    });
+                                });
+                        });
+                }
+
+                window.generatePDF = function (plateNumber) {
+                    console.log(`📥 Generating PDF for plate: ${plateNumber}`);
+
+                    if (!window.jspdf || !window.QRCode) {
+                        console.error("❌ jsPDF or QRCode is missing!");
+                        alert("Error: jsPDF or QRCode library is missing.");
+                        return;
+                    }
+
+                    console.log("🔄 Fetching summons data from API...");
+                    fetch(`/summons?plate=${plateNumber}`)
+                        .then(response => response.json())
+                        .then(async summonsData => {
+                            console.log("📌 API Response:", summonsData);
+
+                            if (!Array.isArray(summonsData) || summonsData.length === 0) {
+                                alert("No summons found for this plate.");
+                                return;
+                            }
+
+                            console.log("✅ Proceeding with PDF generation...");
+
+                            const { jsPDF } = window.jspdf;
+                            const doc = new jsPDF("p", "mm", "a4"); // A4 Portrait Mode
+
+                            if (!doc.autoTable) {
+                                alert("Error: jsPDF autoTable plugin is missing.");
+                                return;
+                            }
+
+                            // ✅ Adjusted Logo to Slim and Centered (width 20, height 40)
+                            const logoWidth = 20;
+                            const logoHeight = 40;
+                            const pageWidth = doc.internal.pageSize.getWidth();
+                            const centerX = (pageWidth - logoWidth) / 2;
+
+                            const logoURL = "/static/mbklogo.png";
+                            doc.addImage(logoURL, "PNG", centerX, 10, logoWidth, logoHeight);
+
+                            // ✅ Add Title Below Logo
+                            doc.setFontSize(12);
+                            doc.setFont("helvetica", "bold");
+                            doc.text("NOTIS TERTUNGGAK", pageWidth / 2, 55, { align: "center" });
+                            doc.text("KESALAHAN DI BAWAH AKTA PENGANGKUTAN JALAN 1987 PERINTAH", pageWidth / 2, 63, { align: "center" });
+                            doc.text("PENGANGKUTAN JALAN (PERUNTUKAN TEMPAT LETAK KERETA)(MAJLIS", pageWidth / 2, 71, { align: "center" });
+                            doc.text("PERBANDARAN KUANTAN) 2005", pageWidth / 2, 79, { align: "center" });
+
+                            // ✅ Document Metadata (Aligned Properly)
+                            let startY = 90;
+                            doc.setFontSize(11);
+                            doc.setFont("helvetica", "normal");
+                            doc.text("Tarikh Cetak :", 15, startY);
+                            doc.text(new Date().toISOString().split('T')[0], 50, startY); // Right-aligned date
+
+                            doc.text("No Pendaftaran Kenderaan :", 15, startY + 6);
+                            doc.text(plateNumber, 70, startY + 6); // Right-aligned plate number
+
+                            // ✅ Explanation Text
+                            let tableY = startY + 16;
+                            doc.setFontSize(10);
+                            doc.text("BAHAWASANYA saya mempunyai alasan yang munasabah untuk mempercayai bahawa", 15, tableY);
+                            doc.text("anda telah melakukan kesalahan seperti berikut:", 15, tableY + 5);
+
+                            tableY += 10;
+
+                            // ✅ Table Formatting (Properly Aligned)
+                            doc.autoTable({
+                                startY: tableY,
+                                head: [["Bil", "Tarikh", "No. Kompaun", "Kesalahan", "Lokasi", "Jumlah (RM)"]],
+                                body: summonsData.map((summon, index) => [
+                                    `${index + 1}.`,
+                                    summon.date || "-",
+                                    summon.noticeNo || "-",
+                                    `PERINTAH ${summon.offence || "-"}`, // ✅ Prepend "PERINTAH" before the offence number
+                                    summon.location || "-",
+                                    `RM${(summon.amount || "0").toString().replace(/[^\d.]/g, "")}`
+
+                                ]),
+                                styles: {
+                                    fontSize: 9, // ✅ Smaller font for compact look
+                                    lineWidth: 0.3, // ✅ Thinner Borders
+                                    cellPadding: 2, // ✅ Less Padding
+                                    valign: "middle",
+                                    textColor: [0, 0, 0] // ✅ Black text
+                                },
+                                headStyles: {
+                                    fillColor: [255, 255, 255], // ✅ No Background Color
+                                    textColor: [0, 0, 0], // ✅ Black Text for Headers
+                                    fontSize: 10,
+                                    fontStyle: "bold",
+                                    lineWidth: 0.4 // ✅ Slightly Darker Borders
+                                },
+                                columnStyles: {
+                                    0: { cellWidth: 9, halign: "center" },  // ✅ Narrow "Bil" column
+                                    1: { cellWidth: 20, halign: "center" }, // ✅ Compact "Tarikh"
+                                    2: { cellWidth: 30, halign: "center" }, // ✅ "No. Kompaun" fits properly
+                                    3: { cellWidth: 30, halign: "left" },   // ✅ "Kesalahan" not too wide
+                                    4: { cellWidth: 50, halign: "center" }, // ✅ "Lokasi" aligned well
+                                    5: { cellWidth: 20, halign: "right" }   // ✅ "Jumlah" column fits neatly
+                                },
+                                theme: "grid"
+                            });
+
+                            // ✅ Calculate total amount
+                            let totalAmount = summonsData.reduce((sum, summon) => {
+                                let amount = (summon.amount || "0").toString().replace(/[^\d.]/g, ""); // Remove non-numeric characters
+                                return sum + (parseFloat(amount) || 0);
+                            }, 0);
+                            let finalY = doc.lastAutoTable.finalY + 10;
+                            doc.setFontSize(11);
+                            doc.setFont("helvetica", "bold");
+                            doc.text(`Jumlah Keseluruhan: RM${totalAmount ? totalAmount.toFixed(2) : "0.00"}`, 120, finalY);
+
+                            // ✅ Bold & Underlined Text for Legal Warning
+                            finalY += 15;
+                            doc.setFont("helvetica", "normal");
+                            doc.text("Tuan/Puan dikehendaki menyelesaikan segala tunggakan-tunggakan di atas dalam", 15, finalY);
+                            doc.text("tempoh 14 hari dari notis ini dikeluarkan. Sekiranya gagal berbuat demikian, tindakan", 15, finalY + 6);
+                            doc.text("undang-undang akan diambil.Jika ada pertanyaan, sila hubungi kami di talian 03-25128282", 15, finalY + 12);
+
+                            // ✅ Footer Section
+                            finalY += 25;
+                            doc.setFont("helvetica", "normal");
+                            doc.text("Sekian, terima kasih.", 15, finalY);
+
+                            // ✅ Generate QR Code for Summons Page
+                            console.log("🔄 Generating QR Code...");
+
+                            const qrCodeURL = `http://192.168.8.108:5001/queue-summons?plate=${plateNumber}`;
+
+                            try {
+                                let tempDiv = document.createElement("div"); // Temporary div for QR code generation
+                                let qrCode = new QRCode(tempDiv, {
+                                    text: qrCodeURL,
+                                    width: 120,
+                                    height: 120,
+                                    correctLevel: QRCode.CorrectLevel.H
+                                });
+
+                                setTimeout(() => {
+                                    let qrCanvas = tempDiv.querySelector("canvas");
+                                    if (qrCanvas) {
+                                        let qrDataURL = qrCanvas.toDataURL("image/png"); // Convert QR to DataURL
+
+                                        // ✅ Move QR Code Lower (closer to the bottom of the page)
+                                        let qrYPosition = doc.internal.pageSize.getHeight() - 60; // Adjust Y position
+
+                                        doc.addImage(qrDataURL, "PNG", 160, qrYPosition, 35, 35);
+                                        doc.setFontSize(9).text("Sila imbas untuk pembayaran", 160, qrYPosition + 40);
+                                        doc.setFontSize(8).text("Disediakan oleh CityCarPark", 160, qrYPosition + 50);
+                                    } else {
+                                        console.error("❌ QR Code Canvas Not Found");
+                                    }
+
+                                    // ✅ Always save the PDF, even if QR fails
+                                    doc.save(`${plateNumber}_Summons.pdf`);
+                                }, 1000); // Delay to allow QR generation
+                            } catch (err) {
+                                console.error("❌ Error Generating QR Code:", err);
+                                doc.save(`${plateNumber}_Summons.pdf`); // Save PDF even if QR fails
+                            }
+                        })
+                        .catch(error => console.error("❌ Error fetching summons data:", error));
+                };
+
+                let trackingMap;
+                let historicalTrackingMap;
+                let trackingPath = [];
+                let vehicleMarker = null;
+
+                function initTrackingMap() {
+                    trackingMap = new google.maps.Map(document.getElementById("liveTrackingMap"), {
+                        center: { lat: 3.139, lng: 101.6869 },
+                        zoom: 13,
+                        mapTypeId: "roadmap"
+                    });
+
+                    historicalTrackingMap = new google.maps.Map(document.getElementById("historicalTrackingMap"), {
+                        center: { lat: 3.139, lng: 101.6869 },
+                        zoom: 13,
+                        mapTypeId: "roadmap"
+                    });
+                }
+
+
+                function updateTracking() {
+                    fetch("/gps-tracking")
+                        .then(response => response.json())
+                        .then(data => {
+                            if (!data.latitude || !data.longitude) return;
+
+                            const { latitude, longitude, speed, start_time } = data;
+
+                            const position = { lat: latitude, lng: longitude };
+                            trackingPath.push(position);
+
+                            if (!vehicleMarker) {
+                                vehicleMarker = new google.maps.Marker({
+                                    position: position,
+                                    map: trackingMap,
+                                    title: "Vehicle Location",
+                                    icon: {
+                                        url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+                                    }
+                                });
+                            } else {
+                                vehicleMarker.setPosition(position);
+                            }
+
+                            // Draw route line
+                            const trackingPolyline = new google.maps.Polyline({
+                                path: trackingPath,
+                                geodesic: true,
+                                strokeColor: "#0000FF",
+                                strokeOpacity: 1.0,
+                                strokeWeight: 3
+                            });
+                            trackingPolyline.setMap(trackingMap);
+
+                            // Append to table
+                            const row = `<tr>
+                <td>${start_time}</td>
+                <td>${latitude.toFixed(6)}</td>
+                <td>${longitude.toFixed(6)}</td>
+                <td>${speed}</td>
+            </tr>`;
+                            document.getElementById("liveTrackingTable").innerHTML += row;
+                        })
+                        .catch(err => console.error("Error fetching GPS:", err));
+                }
+
+
+                function searchTrackingData() {
+                    let plateNumber = document.getElementById("plateSearch").value.trim();
+                    if (!plateNumber) {
+                        alert("Please enter a plate number.");
+                        return;
+                    }
+
+                    let start = document.getElementById("startDate").value;
+                    let end = document.getElementById("endDate").value;
+                    fetch(`/gps-tracking?plate=${plateNumber}&start=${start}&end=${end}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.length === 0) {
+                                alert("No tracking data found for this plate number.");
+                                return;
+                            }
+
+                            // ✅ Set the playbackData here
+                            playbackData = data;
+
+                            document.getElementById("historicalTrackingTable").innerHTML = "";
+
+                            let trackingPath = [];
+
+                            data.forEach(entry => {
+                                let { latitude, longitude, speed, time } = entry;
+                                trackingPath.push({ lat: latitude, lng: longitude });
+
+                                let row = `<tr>
+            <td>${time}</td>
+            <td>${latitude.toFixed(6)}</td>
+            <td>${longitude.toFixed(6)}</td>
+            <td>${speed}</td>
+        </tr>`;
+                                document.getElementById("historicalTrackingTable").innerHTML += row;
+                            });
+
+                            // ✅ Show playback data on map
+                            historicalTrackingMap = new google.maps.Map(document.getElementById("historicalTrackingMap"), {
+                                center: trackingPath[0],
+                                zoom: 15,
+                                mapTypeId: "roadmap"
+                            });
+
+                            // ✅ Plot markers
+                            trackingPath.forEach(coord => {
+                                new google.maps.Marker({
+                                    position: coord,
+                                    map: historicalTrackingMap
                                 });
                             });
+
+                            // ✅ Draw path line
+                            if (trackingPath.length > 1) {
+                                let trackingPolyline = new google.maps.Polyline({
+                                    path: trackingPath,
+                                    geodesic: true,
+                                    strokeColor: "#0000FF",
+                                    strokeOpacity: 1.0,
+                                    strokeWeight: 3
+                                });
+                                trackingPolyline.setMap(historicalTrackingMap);
+                            }
+
+                        })
+
+                        .catch(error => console.error("Error fetching tracking data:", error));
+                }
+
+                // ✅ Update clearTrackingSearch() for Google Maps:
+                function clearTrackingSearch() {
+                    document.getElementById("plateSearch").value = "";
+                    document.getElementById("startDate").value = "";
+                    document.getElementById("endDate").value = "";
+                    document.getElementById("historicalTrackingTable").innerHTML = "";
+
+                    // Reset the historical map
+                    historicalTrackingMap = new google.maps.Map(document.getElementById("historicalTrackingMap"), {
+                        center: { lat: 3.139, lng: 101.6869 },
+                        zoom: 13,
+                        mapTypeId: "roadmap"
                     });
-            }
-
-            window.generatePDF = function (plateNumber) {
-                console.log(`📥 Generating PDF for plate: ${plateNumber}`);
-
-                if (!window.jspdf || !window.QRCode) {
-                    console.error("❌ jsPDF or QRCode is missing!");
-                    alert("Error: jsPDF or QRCode library is missing.");
-                    return;
                 }
 
-                console.log("🔄 Fetching summons data from API...");
-                fetch(`/summons?plate=${plateNumber}`)
-                    .then(response => response.json())
-                    .then(async summonsData => {
-                        console.log("📌 API Response:", summonsData);
+                function showTrackingTab(type) {
+                    const liveTab = document.getElementById("liveTrackingTab");
+                    const historyTab = document.getElementById("historicalTrackingTab");
 
-                        if (!Array.isArray(summonsData) || summonsData.length === 0) {
-                            alert("No summons found for this plate.");
-                            return;
-                        }
-
-                        console.log("✅ Proceeding with PDF generation...");
-
-                        const { jsPDF } = window.jspdf;
-                        const doc = new jsPDF("p", "mm", "a4"); // A4 Portrait Mode
-
-                        if (!doc.autoTable) {
-                            alert("Error: jsPDF autoTable plugin is missing.");
-                            return;
-                        }
-
-                        // ✅ Adjusted Logo to Slim and Centered (width 20, height 40)
-                        const logoWidth = 20;
-                        const logoHeight = 40;
-                        const pageWidth = doc.internal.pageSize.getWidth();
-                        const centerX = (pageWidth - logoWidth) / 2;
-
-                        const logoURL = "/static/mbklogo.png";
-                        doc.addImage(logoURL, "PNG", centerX, 10, logoWidth, logoHeight);
-
-                        // ✅ Add Title Below Logo
-                        doc.setFontSize(12);
-                        doc.setFont("helvetica", "bold");
-                        doc.text("NOTIS TERTUNGGAK", pageWidth / 2, 55, { align: "center" });
-                        doc.text("KESALAHAN DI BAWAH AKTA PENGANGKUTAN JALAN 1987 PERINTAH", pageWidth / 2, 63, { align: "center" });
-                        doc.text("PENGANGKUTAN JALAN (PERUNTUKAN TEMPAT LETAK KERETA)(MAJLIS", pageWidth / 2, 71, { align: "center" });
-                        doc.text("PERBANDARAN KUANTAN) 2005", pageWidth / 2, 79, { align: "center" });
-
-                        // ✅ Document Metadata (Aligned Properly)
-                        let startY = 90;
-                        doc.setFontSize(11);
-                        doc.setFont("helvetica", "normal");
-                        doc.text("Tarikh Cetak :", 15, startY);
-                        doc.text(new Date().toISOString().split('T')[0], 50, startY); // Right-aligned date
-
-                        doc.text("No Pendaftaran Kenderaan :", 15, startY + 6);
-                        doc.text(plateNumber, 70, startY + 6); // Right-aligned plate number
-
-                        // ✅ Explanation Text
-                        let tableY = startY + 16;
-                        doc.setFontSize(10);
-                        doc.text("BAHAWASANYA saya mempunyai alasan yang munasabah untuk mempercayai bahawa", 15, tableY);
-                        doc.text("anda telah melakukan kesalahan seperti berikut:", 15, tableY + 5);
-
-                        tableY += 10;
-
-                        // ✅ Table Formatting (Properly Aligned)
-                        doc.autoTable({
-                            startY: tableY,
-                            head: [["Bil", "Tarikh", "No. Kompaun", "Kesalahan", "Lokasi", "Jumlah (RM)"]],
-                            body: summonsData.map((summon, index) => [
-                                `${index + 1}.`,
-                                summon.date || "-",
-                                summon.noticeNo || "-",
-                                `PERINTAH ${summon.offence || "-"}`, // ✅ Prepend "PERINTAH" before the offence number
-                                summon.location || "-",
-                                `RM${(summon.amount || "0").toString().replace(/[^\d.]/g, "")}`
-
-                            ]),
-                            styles: {
-                                fontSize: 9, // ✅ Smaller font for compact look
-                                lineWidth: 0.3, // ✅ Thinner Borders
-                                cellPadding: 2, // ✅ Less Padding
-                                valign: "middle",
-                                textColor: [0, 0, 0] // ✅ Black text
-                            },
-                            headStyles: {
-                                fillColor: [255, 255, 255], // ✅ No Background Color
-                                textColor: [0, 0, 0], // ✅ Black Text for Headers
-                                fontSize: 10,
-                                fontStyle: "bold",
-                                lineWidth: 0.4 // ✅ Slightly Darker Borders
-                            },
-                            columnStyles: {
-                                0: { cellWidth: 9, halign: "center" },  // ✅ Narrow "Bil" column
-                                1: { cellWidth: 20, halign: "center" }, // ✅ Compact "Tarikh"
-                                2: { cellWidth: 30, halign: "center" }, // ✅ "No. Kompaun" fits properly
-                                3: { cellWidth: 30, halign: "left" },   // ✅ "Kesalahan" not too wide
-                                4: { cellWidth: 50, halign: "center" }, // ✅ "Lokasi" aligned well
-                                5: { cellWidth: 20, halign: "right" }   // ✅ "Jumlah" column fits neatly
-                            },
-                            theme: "grid"
-                        });
-
-                        // ✅ Calculate total amount
-                        let totalAmount = summonsData.reduce((sum, summon) => {
-                            let amount = (summon.amount || "0").toString().replace(/[^\d.]/g, ""); // Remove non-numeric characters
-                            return sum + (parseFloat(amount) || 0);
-                        }, 0);
-                        let finalY = doc.lastAutoTable.finalY + 10;
-                        doc.setFontSize(11);
-                        doc.setFont("helvetica", "bold");
-                        doc.text(`Jumlah Keseluruhan: RM${totalAmount ? totalAmount.toFixed(2) : "0.00"}`, 120, finalY);
-
-                        // ✅ Bold & Underlined Text for Legal Warning
-                        finalY += 15;
-                        doc.setFont("helvetica", "normal");
-                        doc.text("Tuan/Puan dikehendaki menyelesaikan segala tunggakan-tunggakan di atas dalam", 15, finalY);
-                        doc.text("tempoh 14 hari dari notis ini dikeluarkan. Sekiranya gagal berbuat demikian, tindakan", 15, finalY + 6);
-                        doc.text("undang-undang akan diambil.Jika ada pertanyaan, sila hubungi kami di talian 03-25128282", 15, finalY + 12);
-
-                        // ✅ Footer Section
-                        finalY += 25;
-                        doc.setFont("helvetica", "normal");
-                        doc.text("Sekian, terima kasih.", 15, finalY);
-
-                        // ✅ Generate QR Code for Summons Page
-                        console.log("🔄 Generating QR Code...");
-
-                        const qrCodeURL = `http://192.168.8.108:5001/queue-summons?plate=${plateNumber}`;
-
-                        try {
-                            let tempDiv = document.createElement("div"); // Temporary div for QR code generation
-                            let qrCode = new QRCode(tempDiv, {
-                                text: qrCodeURL,
-                                width: 120,
-                                height: 120,
-                                correctLevel: QRCode.CorrectLevel.H
-                            });
-
-                            setTimeout(() => {
-                                let qrCanvas = tempDiv.querySelector("canvas");
-                                if (qrCanvas) {
-                                    let qrDataURL = qrCanvas.toDataURL("image/png"); // Convert QR to DataURL
-
-                                    // ✅ Move QR Code Lower (closer to the bottom of the page)
-                                    let qrYPosition = doc.internal.pageSize.getHeight() - 60; // Adjust Y position
-
-                                    doc.addImage(qrDataURL, "PNG", 160, qrYPosition, 35, 35);
-                                    doc.setFontSize(9).text("Sila imbas untuk pembayaran", 160, qrYPosition + 40);
-                                    doc.setFontSize(8).text("Disediakan oleh CityCarPark", 160, qrYPosition + 50);
-                                } else {
-                                    console.error("❌ QR Code Canvas Not Found");
-                                }
-
-                                // ✅ Always save the PDF, even if QR fails
-                                doc.save(`${plateNumber}_Summons.pdf`);
-                            }, 1000); // Delay to allow QR generation
-                        } catch (err) {
-                            console.error("❌ Error Generating QR Code:", err);
-                            doc.save(`${plateNumber}_Summons.pdf`); // Save PDF even if QR fails
-                        }
-                    })
-                    .catch(error => console.error("❌ Error fetching summons data:", error));
-            };
-
-            let trackingMap;
-            let vehicleMarker;
-            let trackingPath = [];
-
-            function initTrackingMap() {
-                let trackingMapDiv = document.getElementById("trackingMap");
-
-                if (!trackingMapDiv) {
-                    console.error("🚨 Tracking Map div not found!");
-                    return;
-                }
-
-                trackingMap = new google.maps.Map(trackingMapDiv, {
-                    center: { lat: 3.139, lng: 101.6869 }, // Default Kuala Lumpur
-                    zoom: 13,
-                    mapTypeId: "roadmap"
-                });
-            }
-
-            function updateTracking() {
-                fetch("/gps-tracking")
-                    .then(response => response.json())
-                    .then(data => {
-                        if (!data.latitude || !data.longitude) return;
-                        let { latitude, longitude, speed, start_time } = data;
-                        trackingPath.push({ lat: latitude, lng: longitude });
-
-                        // Update Vehicle Marker
-                        if (!vehicleMarker) {
-                            vehicleMarker = new google.maps.Marker({
-                                position: { lat: latitude, lng: longitude },
-                                map: trackingMap,
-                                title: "Vehicle Location",
-                                icon: {
-                                    url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
-                                }
-                            });
-                        } else {
-                            vehicleMarker.setPosition({ lat: latitude, lng: longitude });
-                        }
-
-                        // Draw Route Path
-                        if (trackingPath.length > 1) {
-                            let trackingPolyline = new google.maps.Polyline({
-                                path: trackingPath,
-                                geodesic: true,
-                                strokeColor: "#0000FF",
-                                strokeOpacity: 1.0,
-                                strokeWeight: 3
-                            });
-                            trackingPolyline.setMap(trackingMap);
-                        }
-
-                        // Update Table Data
-                        let tableRow = `<tr><td>${start_time}</td><td>${latitude.toFixed(6)}</td><td>${longitude.toFixed(6)}</td><td>${speed}</td></tr>`;
-                        document.getElementById('trackingTable').innerHTML += tableRow;
-                    });
-            }
-
-            function searchTrackingData() {
-                let plateNumber = document.getElementById("plateSearch").value.trim();
-                if (!plateNumber) {
-                    alert("Please enter a plate number.");
-                    return;
-                }
-
-                fetch(`/gps-tracking?plate=${plateNumber}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.length === 0) {
-                            alert("No tracking data found for this plate number.");
-                            return;
-                        }
-
-                        document.getElementById("trackingTable").innerHTML = "";
-
-                        let trackingPath = [];
-                        data.forEach(entry => {
-                            let { latitude, longitude, speed, time } = entry;
-                            trackingPath.push({ lat: latitude, lng: longitude });
-
-                            let row = `<tr><td>${time}</td><td>${latitude.toFixed(6)}</td><td>${longitude.toFixed(6)}</td><td>${speed}</td></tr>`;
-                            document.getElementById("trackingTable").innerHTML += row;
-                        });
-
-                        // Clear previous markers and path
-                        trackingMap = new google.maps.Map(document.getElementById("trackingMap"), {
-                            center: trackingPath[0],
-                            zoom: 15,
-                            mapTypeId: "roadmap"
-                        });
-
-                        // Plot new markers
-                        trackingPath.forEach(coord => {
-                            new google.maps.Marker({
-                                position: coord,
-                                map: trackingMap
-                            });
-                        });
-
-                        // Draw new path
-                        if (trackingPath.length > 1) {
-                            let trackingPolyline = new google.maps.Polyline({
-                                path: trackingPath,
-                                geodesic: true,
-                                strokeColor: "#0000FF",
-                                strokeOpacity: 1.0,
-                                strokeWeight: 3
-                            });
-                            trackingPolyline.setMap(trackingMap);
-                        }
-                    })
-                    .catch(error => console.error("Error fetching tracking data:", error));
-            }
-
-            function clearTrackingSearch() {
-                document.getElementById("plateSearch").value = "";
-                document.getElementById("trackingTable").innerHTML = "";
-                trackingMap.eachLayer(layer => {
-                    if (layer instanceof L.Marker || layer instanceof L.Polyline) {
-                        trackingMap.removeLayer(layer);
-                    }
-                });
-            }
-
-            window.onload = function () {
-                initTrackingMap();
-                setInterval(updateTracking, 5000);
-            };
-
-            let plateNumber = new URLSearchParams(window.location.search).get("plate");
-
-            document.addEventListener("DOMContentLoaded", function () {
-                const urlParams = new URLSearchParams(window.location.search);
-                const plateNumber = urlParams.get("plate");
-                const view = urlParams.get("view");
-
-                if (plateNumber) {
-                    document.getElementById("plateNumber").innerText = plateNumber;
-                    fetchSummonsData(plateNumber);
-
-                    if (view === "summons-payment") {
-                        showSection("summons-payment");
-
-                        // ✅ Hide Sidebar + Topbar for clean QR view
-                        document.querySelector(".sidebar").style.display = "none";
-                        document.querySelector(".topbar").style.display = "none";
-                        document.getElementById("mainBody").style.background = "#ffffff"; // Optional white background
-                        document.getElementById("summons-payment").classList.add("fullscreen");
+                    if (type === 'live') {
+                        liveTab.style.display = 'block';
+                        historyTab.style.display = 'none';
+                    } else {
+                        liveTab.style.display = 'none';
+                        historyTab.style.display = 'block';
                     }
                 }
-            });
 
-            function fetchSummonsData(plateNumber) {
-                console.log("🚀 Fetching summons for plate:", plateNumber);
+                window.onload = function () {
+                    initTrackingMap();
+                    setInterval(updateTracking, 5000);
+                    showTrackingTab("live"); // Default tab
+                };
 
-                fetch(`/summons?plate=${plateNumber}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        let listContainer = document.getElementById("summonsList");
-                        listContainer.innerHTML = ""; // Clear previous results
 
-                        if (!data.length) {
-                            console.warn("🚨 No summons found for this plate:", plateNumber);
-                            listContainer.innerHTML = "<p>No summons found for this plate.</p>";
-                            return;
+                let plateNumber = new URLSearchParams(window.location.search).get("plate");
+
+                document.addEventListener("DOMContentLoaded", function () {
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const plateNumber = urlParams.get("plate");
+                    const view = urlParams.get("view");
+
+                    if (plateNumber) {
+                        document.getElementById("plateNumber").innerText = plateNumber;
+                        fetchSummonsData(plateNumber);
+
+                        if (view === "summons-payment") {
+                            showSection("summons-payment");
+
+                            // ✅ Hide Sidebar + Topbar for clean QR view
+                            document.querySelector(".sidebar").style.display = "none";
+                            document.querySelector(".topbar").style.display = "none";
+                            document.getElementById("mainBody").style.background = "#ffffff"; // Optional white background
+                            document.getElementById("summons-payment").classList.add("fullscreen");
                         }
+                    }
+                });
 
-                        data.forEach((summons, index) => {
-                            console.log(`✅ Creating card for Notice No: ${summons.noticeNo}`);
+                let playbackMarker;
+                let playbackPath;
+                let playbackInterval;
+                let playbackIndex = 0;
+                let isPaused = false;
+                let playbackData = [];
 
-                            let card = document.createElement("div");
-                            card.classList.add("summons-card");
+                function exportPlaybackToExcel() {
+                    if (!playbackData.length) {
+                        alert("No data to export.");
+                        return;
+                    }
 
-                            card.innerHTML = `
+                    let csv = "Time,Latitude,Longitude,Speed (km/h)\n";
+                    playbackData.forEach(entry => {
+                        csv += `${entry.time},${entry.lat},${entry.lng},${entry.speed}\n`;
+                    });
+
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'historical_tracking.csv';
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                }
+
+                function startPlayback(data = [], speed = 1000) {
+                    if (!data.length) return;
+                    if (playbackIndex > 0) {
+                        let prev = playbackData[playbackIndex - 1];
+                        let curr = playbackData[playbackIndex];
+                        let timeDiff = new Date(curr.time) - new Date(prev.time); // in ms
+                        if (timeDiff > 60000 && curr.speed < 5) {
+                            console.log("🟡 Idle detected at:", curr.time);
+                        }
+                    }
+
+                    if (playbackInterval) clearInterval(playbackInterval);
+                    if (playbackMarker) playbackMarker.setMap(null);
+                    if (playbackPath) playbackPath.setMap(null);
+
+                    playbackIndex = 0;
+                    isPaused = false;
+                    playbackData = data;
+
+                    playbackMarker = new google.maps.Marker({
+                        position: { lat: data[0].lat, lng: data[0].lng },
+                        map: historicalTrackingMap,  // ✅ was: trackingMap
+                        title: "Vehicle Playback",
+                        icon: {
+                            url: "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
+                        }
+                    });
+
+                    playbackPath = new google.maps.Polyline({
+                        path: [],
+                        geodesic: true,
+                        strokeColor: "#FFA500",
+                        strokeOpacity: 1.0,
+                        strokeWeight: 4,
+                        map: historicalTrackingMap  // ✅ was: trackingMap
+                    });
+
+
+                    playbackInterval = setInterval(() => {
+                        if (isPaused || playbackIndex >= playbackData.length) return;
+
+                        const point = playbackData[playbackIndex];
+                        const position = { lat: point.lat, lng: point.lng };
+
+                        playbackMarker.setPosition(position);
+                        playbackPath.getPath().push(new google.maps.LatLng(point.lat, point.lng));
+                        historicalTrackingMap.panTo(position); // ✅ was: trackingMap
+
+                        playbackIndex++;
+                    }, speed);
+                }
+
+                function pausePlayback() {
+                    isPaused = true;
+                    console.log("⏸ Playback paused");
+                }
+
+                function stopPlayback() {
+                    console.log("⏹ Stopping playback...");
+                    isPaused = false;
+                    playbackIndex = 0;
+                    clearInterval(playbackInterval);
+
+                    if (playbackMarker) {
+                        playbackMarker.setMap(null);
+                        playbackMarker = null;
+                    }
+
+                    if (playbackPath) {
+                        playbackPath.setMap(null);
+                        playbackPath = null;
+                    }
+
+                    playbackData = [];
+                }
+
+                function fetchSummonsData(plateNumber) {
+                    console.log("🚀 Fetching summons for plate:", plateNumber);
+
+                    fetch(`/summons?plate=${plateNumber}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            let listContainer = document.getElementById("summonsList");
+                            listContainer.innerHTML = ""; // Clear previous results
+
+                            if (!data.length) {
+                                console.warn("🚨 No summons found for this plate:", plateNumber);
+                                listContainer.innerHTML = "<p>No summons found for this plate.</p>";
+                                return;
+                            }
+
+                            data.forEach((summons, index) => {
+                                console.log(`✅ Creating card for Notice No: ${summons.noticeNo}`);
+
+                                let card = document.createElement("div");
+                                card.classList.add("summons-card");
+
+                                card.innerHTML = `
                     <div class="checkbox-container">
                         <input type="checkbox" id="summon_${index}" value="${summons.noticeNo}" data-amount="${summons.amount}">
                         <h3>Notice No.: ${summons.noticeNo}</h3>
@@ -1254,58 +1439,58 @@
                     <p><strong>Amount:</strong> RM${summons.amount}</p>
                 `;
 
-                            listContainer.appendChild(card);
-                        });
+                                listContainer.appendChild(card);
+                            });
 
-                        console.log("✅ Summons list updated successfully.");
-                    })
-                    .catch(error => console.error("❌ Error fetching summons data:", error));
-            }
-
-            function generatePaymentQR() {
-                let selectedSummons = [];
-                let totalAmount = 0;
-
-                document.querySelectorAll("input[type=checkbox]:checked").forEach(checkbox => {
-                    selectedSummons.push(checkbox.value);
-                    totalAmount += parseFloat(checkbox.getAttribute("data-amount"));
-                });
-
-                if (selectedSummons.length === 0) {
-                    alert("Please select at least one summons.");
-                    return;
+                            console.log("✅ Summons list updated successfully.");
+                        })
+                        .catch(error => console.error("❌ Error fetching summons data:", error));
                 }
 
-                fetch("/api/payment/generate-qr", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ summons: selectedSummons, totalAmount })
-                })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.paymentUrl) {
-                            document.getElementById("paymentQRCode").innerHTML = `
+                function generatePaymentQR() {
+                    let selectedSummons = [];
+                    let totalAmount = 0;
+
+                    document.querySelectorAll("input[type=checkbox]:checked").forEach(checkbox => {
+                        selectedSummons.push(checkbox.value);
+                        totalAmount += parseFloat(checkbox.getAttribute("data-amount"));
+                    });
+
+                    if (selectedSummons.length === 0) {
+                        alert("Please select at least one summons.");
+                        return;
+                    }
+
+                    fetch("/api/payment/generate-qr", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ summons: selectedSummons, totalAmount })
+                    })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.paymentUrl) {
+                                document.getElementById("paymentQRCode").innerHTML = `
                 <p><strong>Scan QR to Pay:</strong></p>
                 <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(data.paymentUrl)}&size=200x200">
                 <p><a href="${data.paymentUrl}" target="_blank">Click here if QR does not scan</a></p>
             `;
-                        } else {
-                            alert("Failed to generate payment QR code.");
-                        }
-                    })
-                    .catch(error => console.error("Payment Error:", error));
-            }
+                            } else {
+                                alert("Failed to generate payment QR code.");
+                            }
+                        })
+                        .catch(error => console.error("Payment Error:", error));
+                }
 
-            function exportToPDF() {
-                alert("🚀 PDF Export functionality coming soon!");
-            }
+                function exportToPDF() {
+                    alert("🚀 PDF Export functionality coming soon!");
+                }
 
-            // 🔄 Refresh data every 5 seconds
-            setInterval(fetchData, 5000);
-            fetchData();
+                // 🔄 Refresh data every 5 seconds
+                setInterval(fetchData, 5000);
+                fetchData();
 
 
-        </script>
+            </script>
 
 </body>
 
