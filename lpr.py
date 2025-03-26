@@ -494,6 +494,31 @@ def get_gps_tracking():
         return jsonify(latest_gps)
     return jsonify({"error": "No GPS data available"}), 404  # ✅ Return proper error message
 
+@app.route("/gps-tracking-history", methods=["GET"])
+def gps_tracking_history():
+    plate = request.args.get("plate")
+    start = request.args.get("start")
+    end = request.args.get("end")
+
+    # If no filter applied, return all for testing
+    filtered = gps_logs
+
+    # If needed, apply filter
+    if plate:
+        filtered = [g for g in filtered if g.get("plate") == plate]
+    if start and end:
+        filtered = [g for g in filtered if start <= g.get("time", "") <= end]
+
+    # Format for playback
+    formatted = [{
+        "lat": g["latitude"],
+        "lng": g["longitude"],
+        "time": g["time"],
+        "speed": g.get("speed", 0)
+    } for g in filtered if "latitude" in g and "longitude" in g]
+
+    return jsonify(formatted)
+
 @app.route("/queue-summons")
 def redirect_to_dashboard_summons():
     plate = request.args.get("plate")
@@ -507,15 +532,3 @@ def redirect_to_dashboard_summons():
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=False)
-
-
-
-
-
-
-
-
-
-
-
-

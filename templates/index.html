@@ -1186,7 +1186,7 @@
 
                     let start = document.getElementById("startDate").value;
                     let end = document.getElementById("endDate").value;
-                    fetch(`/gps-tracking?plate=${plateNumber}&start=${start}&end=${end}`)
+                    fetch(`/gps-tracking-history?plate=${plateNumber}&start=${start}&end=${end}`)
                         .then(response => response.json())
                         .then(data => {
                             if (data.length === 0) {
