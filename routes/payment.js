@@ -60,6 +60,3 @@ router.post("/generate-qr", ensureValidToken, async (req, res) => {
 });
 
 module.exports = router;
-
-
-

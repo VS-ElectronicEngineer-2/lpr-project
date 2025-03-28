@@ -194,6 +194,16 @@
             /* Set fixed width for the detected plates table */
         }
 
+        .tracking-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            justify-content: flex-start;
+            /* Align left */
+            margin-bottom: 15px;
+        }
+
         /* 🔹 Start & Stop Buttons */
         .button-container {
             margin-top: 10px;
@@ -281,25 +291,33 @@
             display: block;
         }
 
-        .tracking-table-container {
-            margin-top: 20px;
+        /* Scrollable table with fixed height like GPS software */
+        .scrollable-table {
+            max-height: 300px;
+            /* or adjust based on your design */
+            overflow-y: auto;
+            border: 1px solid #ccc;
         }
 
-        table {
+        .scrollable-table table {
             width: 100%;
             border-collapse: collapse;
         }
 
-        th,
-        td {
-            padding: 10px;
+        .scrollable-table th,
+        .scrollable-table td {
+            padding: 8px;
+            border: 1px solid #ddd;
             text-align: center;
-            border: 1px solid black;
+            background: white;
         }
 
-        th {
-            background: #031d67;
+        .scrollable-table thead th {
+            position: sticky;
+            top: 0;
+            background-color: #031d67;
             color: white;
+            z-index: 1;
         }
 
         /* ✅ Page Title */
@@ -309,107 +327,6 @@
             color: #031d67;
             margin-bottom: 15px;
             text-align: center;
-        }
-
-        #summons-payment.fullscreen {
-            width: 100vw;
-            height: 100vh;
-            padding-top: 40px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            /* 👈 push content towards the top */
-            background-color: #ffffff;
-            gap: 20px;
-            /* spacing between elements */
-        }
-
-        .summons-header.center-only {
-            justify-content: center;
-            margin-top: 10px;
-            margin-bottom: 10px;
-        }
-
-
-        /* ✅ Summons Section Header */
-        .summons-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            background: #f4f4f4;
-            padding: 15px;
-            border-radius: 8px;
-            box-shadow: 0px 2px 5px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-
-        /* ✅ Summons List Container */
-        .summons-list-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 15px;
-            justify-content: center;
-        }
-
-        /* ✅ Summons Card */
-        .summons-card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
-            padding: 15px;
-            border-left: 5px solid #031d67;
-            width: 320px;
-            transition: 0.3s ease-in-out;
-        }
-
-        .summons-card:hover {
-            box-shadow: 0px 6px 12px rgba(0, 0, 0, 0.15);
-        }
-
-        /* ✅ Summons Card Headings */
-        .summons-card h3 {
-            font-size: 16px;
-            font-weight: bold;
-            color: #031d67;
-            margin-bottom: 5px;
-        }
-
-        /* ✅ Summons Card Paragraph */
-        .summons-card p {
-            font-size: 14px;
-            color: #444;
-            margin: 3px 0;
-        }
-
-        /* ✅ Checkbox Styling */
-        .checkbox-container {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        /* ✅ Action Buttons */
-        .summons-actions {
-            margin-top: 20px;
-            justify-content: center;
-            display: flex;
-        }
-
-
-        /* ✅ Button Styles */
-        .btn {
-            padding: 12px 20px;
-            border: none;
-            cursor: pointer;
-            font-size: 16px;
-            border-radius: 8px;
-            transition: 0.3s ease-in-out;
-        }
-
-        .pay-btn {
-            background: #008CBA;
-            color: white;
         }
 
         .export-btn {
@@ -425,6 +342,73 @@
         .qrcode-container {
             margin-top: 15px;
             text-align: center;
+        }
+
+        /* Shared Button Style */
+        .tracking-tab-btn {
+            padding: 10px 24px;
+            font-weight: bold;
+            border: none;
+            border-radius: 30px;
+            color: white;
+            cursor: pointer;
+            margin-right: 10px;
+            font-size: 16px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease-in-out;
+        }
+
+        .tracking-tab-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        /* 🟦 Deeper Blue Gradient for Live */
+        .live-btn {
+            background: linear-gradient(to right, #004e92, #000428);
+        }
+
+        /* 🔷 Brighter Blue Gradient for History */
+        .history-btn {
+            background: linear-gradient(to right, #00c6ff, #0072ff);
+        }
+
+        /* 🔘 Modern Button Style (shared across buttons) */
+        .modern-btn {
+            background-color: #f4f4f4;
+            border: 1px solid #ccc;
+            color: #333;
+            padding: 8px 16px;
+            font-size: 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .modern-btn:hover {
+            background-color: #eaeaea;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+            transform: translateY(-1px);
+        }
+
+        .play-btn {
+            color: black;
+        }
+
+        .pause-btn {
+            color: black;
+        }
+
+        .stop-btn {
+            color: black;
+        }
+
+        .export-btn {
+            color: black;
         }
     </style>
 
@@ -516,8 +500,9 @@
 
             <!-- 🔘 Switch Tabs -->
             <div style="margin-bottom: 20px;">
-                <button class="btn start-btn" onclick="showTrackingTab('live')">📡 Live Tracking</button>
-                <button class="btn stop-btn" onclick="showTrackingTab('history')">🕓 Historical Playback</button>
+                <button class="tracking-tab-btn live-btn" onclick="showTrackingTab('live')">📡 Live Tracking</button>
+                <button class="tracking-tab-btn history-btn" onclick="showTrackingTab('history')">🕓 Historical
+                    Playback</button>
             </div>
 
             <!-- 🔵 LIVE TRACKING TAB -->
@@ -525,7 +510,7 @@
                 <h3>📡 Real-Time GPS Tracking</h3>
                 <div id="liveTrackingMap" style="height: 500px; width: 100%; max-width: 1200px; margin: auto;"></div>
 
-                <div class="tracking-table-container">
+                <div class="tracking-table-container scrollable-table">
                     <table>
                         <thead>
                             <tr>
@@ -542,29 +527,26 @@
 
             <!-- 🟠 HISTORICAL PLAYBACK TAB -->
             <div id="historicalTrackingTab" style="display: none;">
-                <div style="margin-bottom: 10px; text-align:center;">
-                    <input type="date" id="startDate"> to
-                    <input type="date" id="endDate">
-                    <button class="btn export-btn" onclick="exportPlaybackToExcel()">📄 Export to Excel</button>
-                </div>
-
-                <h3>🕓 Historical GPS Playback</h3>
-                <div class="tracking-search">
-                    <input type="text" id="plateSearch" placeholder="Enter Plate Number...">
+                <div class="tracking-filters">
+                    <input type="text" id="plateSearch" placeholder="Enter Plate Number..." />
                     <button class="btn search-btn" onclick="searchTrackingData()">Search</button>
                     <button class="btn search-btn" onclick="clearTrackingSearch()">Clear</button>
+                    <input type="date" id="startDate">
+                    <input type="date" id="endDate">
+                    <button class="modern-btn export-btn" onclick="exportPlaybackToExcel()">📄 Export to Excel</button>
                 </div>
 
                 <div id="historicalTrackingMap" style="height: 500px; width: 100%; max-width: 1200px; margin: auto;">
                 </div>
 
+                <!-- 🔘 New Modern Buttons -->
                 <div class="button-container" style="margin-top: 15px;">
-                    <button class="btn start-btn" onclick="startPlayback(playbackData, 1000)">▶️ Play</button>
-                    <button class="btn stop-btn" onclick="pausePlayback()">⏸ Pause</button>
-                    <button class="btn stop-btn" onclick="stopPlayback()">⏹ Stop</button>
+                    <button class="modern-btn play-btn" onclick="startPlayback()">▶️ Play</button>
+                    <button class="modern-btn pause-btn" onclick="pausePlayback()">⏸ Pause</button>
+                    <button class="modern-btn stop-btn" onclick="stopPlayback()">⏹ Stop</button>
                 </div>
 
-                <div class="tracking-table-container">
+                <div class="tracking-table-container scrollable-table">
                     <table>
                         <thead>
                             <tr>
@@ -577,26 +559,22 @@
                         <tbody id="historicalTrackingTable"></tbody>
                     </table>
                 </div>
-            </div>
-        </div>
-
-
-        <!-- ✅ Summons Payment Section -->
-        <div id="summons-payment" class="section">
-            <h2 class="page-title">Summons Payment</h2>
-
-            <div class="summons-header center-only">
-                <h3>Summons Details for: <span id="plateNumber"></span></h3>
-            </div>
-
-
-            <!-- ✅ Summons Cards Container -->
-            <div class="summons-list-container" id="summonsList"></div>
-
-            <!-- ✅ Action Buttons -->
-            <div class="summons-actions">
-                <button class="btn pay-btn" onclick="generatePaymentQR()">💳 Pay Selected</button>
-                <div id="paymentQRCode" class="qrcode-container"></div>
+                <!-- 🔶 Detected Idle Periods Table -->
+                <div style="margin-top: 30px;">
+                    <h4 style="color: goldenrod;">🟡 Detected Idle Periods</h4>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Idle Start</th>
+                                <th>Idle End</th>
+                                <th>Duration (sec)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="idleTableBody">
+                            <!-- Will be populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
@@ -762,8 +740,6 @@
                                             : `/static/snapshots/${plate.snapshot}`;
 
                                         console.log(`📸 Image URL for ${plate.plate}: ${imageUrl}`);
-
-
 
                                         // ✅ Debugging log for missing images
                                         console.log(`📸 Image URL for ${plateNumber}: ${imageUrl}`);
@@ -970,6 +946,14 @@
                             const { jsPDF } = window.jspdf;
                             const doc = new jsPDF("p", "mm", "a4"); // A4 Portrait Mode
 
+                            // ✅ Watermark Image
+                            const watermarkURL = "/static/citycarpark-watermark.png";  // or use "/static/citycarpark-watermark.png"
+
+                            const pageHeight = doc.internal.pageSize.getHeight();
+
+                            // ✅ Add watermark behind content
+                            doc.addImage(watermarkURL, "PNG", 25, 60, 160, 160, "", "NONE", 0.1);
+
                             if (!doc.autoTable) {
                                 alert("Error: jsPDF autoTable plugin is missing.");
                                 return;
@@ -1073,7 +1057,7 @@
                             // ✅ Generate QR Code for Summons Page
                             console.log("🔄 Generating QR Code...");
 
-                            const qrCodeURL = `http://192.168.8.108:5001/queue-summons?plate=${plateNumber}`;
+                            const qrCodeURL = `http://192.168.8.108:5001/summons-payment?plate=${plateNumber}`;
 
                             try {
                                 let tempDiv = document.createElement("div"); // Temporary div for QR code generation
@@ -1186,6 +1170,7 @@
 
                     let start = document.getElementById("startDate").value;
                     let end = document.getElementById("endDate").value;
+
                     fetch(`/gps-tracking-history?plate=${plateNumber}&start=${start}&end=${end}`)
                         .then(response => response.json())
                         .then(data => {
@@ -1194,55 +1179,20 @@
                                 return;
                             }
 
-                            // ✅ Set the playbackData here
-                            playbackData = data;
+                            // ✅ Store data only for playback
+                            playbackData = data.map(entry => ({
+                                lat: entry.latitude,
+                                lng: entry.longitude,
+                                speed: entry.speed,
+                                time: entry.time
+                            }));
 
-                            document.getElementById("historicalTrackingTable").innerHTML = "";
+                            // ❌ DO NOT RENDER MAP OR TABLE YET
+                            document.getElementById("historicalTrackingTable").innerHTML = ""; // Optional: clear previous
+                            document.getElementById("idleTableBody").innerHTML = ""; // Clear idle table too
 
-                            let trackingPath = [];
-
-                            data.forEach(entry => {
-                                let { latitude, longitude, speed, time } = entry;
-                                trackingPath.push({ lat: latitude, lng: longitude });
-
-                                let row = `<tr>
-            <td>${time}</td>
-            <td>${latitude.toFixed(6)}</td>
-            <td>${longitude.toFixed(6)}</td>
-            <td>${speed}</td>
-        </tr>`;
-                                document.getElementById("historicalTrackingTable").innerHTML += row;
-                            });
-
-                            // ✅ Show playback data on map
-                            historicalTrackingMap = new google.maps.Map(document.getElementById("historicalTrackingMap"), {
-                                center: trackingPath[0],
-                                zoom: 15,
-                                mapTypeId: "roadmap"
-                            });
-
-                            // ✅ Plot markers
-                            trackingPath.forEach(coord => {
-                                new google.maps.Marker({
-                                    position: coord,
-                                    map: historicalTrackingMap
-                                });
-                            });
-
-                            // ✅ Draw path line
-                            if (trackingPath.length > 1) {
-                                let trackingPolyline = new google.maps.Polyline({
-                                    path: trackingPath,
-                                    geodesic: true,
-                                    strokeColor: "#0000FF",
-                                    strokeOpacity: 1.0,
-                                    strokeWeight: 3
-                                });
-                                trackingPolyline.setMap(historicalTrackingMap);
-                            }
-
+                            alert("Data loaded! Click ▶️ Play to start playback.");
                         })
-
                         .catch(error => console.error("Error fetching tracking data:", error));
                 }
 
@@ -1304,12 +1254,13 @@
                     }
                 });
 
-                let playbackMarker;
-                let playbackPath;
-                let playbackInterval;
-                let playbackIndex = 0;
-                let isPaused = false;
                 let playbackData = [];
+                let playbackIndex = 0;
+                let playbackInterval = null;
+                let playbackMarker = null;
+                let playbackPolyline = null;
+                let playbackPath = null;
+                let isPaused = false;
 
                 function exportPlaybackToExcel() {
                     if (!playbackData.length) {
@@ -1331,15 +1282,15 @@
                     window.URL.revokeObjectURL(url);
                 }
 
-                function startPlayback(data = [], speed = 1000) {
-                    if (!data.length) return;
-                    if (playbackIndex > 0) {
-                        let prev = playbackData[playbackIndex - 1];
-                        let curr = playbackData[playbackIndex];
-                        let timeDiff = new Date(curr.time) - new Date(prev.time); // in ms
-                        if (timeDiff > 60000 && curr.speed < 5) {
-                            console.log("🟡 Idle detected at:", curr.time);
-                        }
+                let idleStartTime = null;
+                let idleEntries = [];
+
+                function startPlayback(speed = 1000) {
+                    console.log("▶️ Starting Playback with data:", playbackData);
+
+                    if (!playbackData || !playbackData.length) {
+                        alert("❌ No data available. Please search first.");
+                        return;
                     }
 
                     if (playbackInterval) clearInterval(playbackInterval);
@@ -1348,11 +1299,11 @@
 
                     playbackIndex = 0;
                     isPaused = false;
-                    playbackData = data;
 
+                    // Create the playback marker
                     playbackMarker = new google.maps.Marker({
-                        position: { lat: data[0].lat, lng: data[0].lng },
-                        map: historicalTrackingMap,  // ✅ was: trackingMap
+                        position: { lat: playbackData[0].lat, lng: playbackData[0].lng },
+                        map: historicalTrackingMap,
                         title: "Vehicle Playback",
                         icon: {
                             url: "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
@@ -1365,22 +1316,108 @@
                         strokeColor: "#FFA500",
                         strokeOpacity: 1.0,
                         strokeWeight: 4,
-                        map: historicalTrackingMap  // ✅ was: trackingMap
+                        map: historicalTrackingMap
                     });
 
+                    let idleStartTime = null;
+                    let idleEndTime = null;
+                    let idleEntries = [];
 
                     playbackInterval = setInterval(() => {
-                        if (isPaused || playbackIndex >= playbackData.length) return;
+                        if (isPaused || playbackIndex >= playbackData.length) {
+                            clearInterval(playbackInterval);
 
-                        const point = playbackData[playbackIndex];
-                        const position = { lat: point.lat, lng: point.lng };
+                            // ✅ Display Detected Idle Periods
+                            const idleTable = document.getElementById("idleTableBody");
+                            idleTable.innerHTML = "";
 
+                            idleEntries.forEach(idle => {
+                                const row = `
+                    <tr>
+                        <td>${idle.start}</td>
+                        <td>${idle.end}</td>
+                        <td>${idle.duration} sec</td>
+                    </tr>`;
+                                idleTable.innerHTML += row;
+                            });
+
+                            return;
+                        }
+
+                        const current = playbackData[playbackIndex];
+                        const prev = playbackIndex > 0 ? playbackData[playbackIndex - 1] : null;
+
+                        const position = { lat: current.lat, lng: current.lng };
                         playbackMarker.setPosition(position);
-                        playbackPath.getPath().push(new google.maps.LatLng(point.lat, point.lng));
-                        historicalTrackingMap.panTo(position); // ✅ was: trackingMap
+                        playbackPath.getPath().push(new google.maps.LatLng(position.lat, position.lng));
+                        historicalTrackingMap.panTo(position);
+
+                        // ✅ Append current GPS data to the historical tracking table
+                        const row = `<tr>
+    <td>${current.time}</td>
+    <td>${current.lat.toFixed(6)}</td>
+    <td>${current.lng.toFixed(6)}</td>
+    <td>${current.speed}</td>
+</tr>`;
+                        document.getElementById("historicalTrackingTable").innerHTML += row;
+
+                        let parkingDuration = ""; // Default empty unless idle is detected
+
+                        if (current.speed < 5 && prev) {
+                            const timeDiff = new Date(current.time) - new Date(prev.time); // in ms
+
+                            if (!idleStartTime) {
+                                idleStartTime = new Date(prev.time);
+                            }
+                            idleEndTime = new Date(current.time);
+
+                            const duration = (idleEndTime - idleStartTime) / 1000; // seconds
+                            if (duration > 10) {
+                                parkingDuration = `${Math.floor(duration / 60)} min ${Math.round(duration % 60)} sec`;
+
+                                idleEntries.push({
+                                    start: idleStartTime.toLocaleTimeString(),
+                                    end: idleEndTime.toLocaleTimeString(),
+                                    duration: Math.round(duration)
+                                });
+
+                                // Marker on idle spot
+                                new google.maps.Marker({
+                                    position,
+                                    map: historicalTrackingMap,
+                                    title: `Idle (${parkingDuration})`,
+                                    icon: { url: "http://maps.google.com/mapfiles/ms/icons/orange-dot.png" }
+                                });
+
+                                idleStartTime = null;
+                                idleEndTime = null;
+                            }
+                        } else {
+                            idleStartTime = null;
+                            idleEndTime = null;
+                        }
 
                         playbackIndex++;
                     }, speed);
+                }
+
+                function renderIdleTimeTable() {
+                    const table = document.getElementById("idleTimeTable");
+                    table.innerHTML = "";
+
+                    if (!idleEntries.length) {
+                        table.innerHTML = "<tr><td colspan='3'>No idle periods detected</td></tr>";
+                        return;
+                    }
+
+                    idleEntries.forEach(idle => {
+                        const row = `<tr>
+            <td>${idle.start}</td>
+            <td>${idle.end}</td>
+            <td>${idle.duration}</td>
+        </tr>`;
+                        table.innerHTML += row;
+                    });
                 }
 
                 function pausePlayback() {
@@ -1405,80 +1442,6 @@
                     }
 
                     playbackData = [];
-                }
-
-                function fetchSummonsData(plateNumber) {
-                    console.log("🚀 Fetching summons for plate:", plateNumber);
-
-                    fetch(`/summons?plate=${plateNumber}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            let listContainer = document.getElementById("summonsList");
-                            listContainer.innerHTML = ""; // Clear previous results
-
-                            if (!data.length) {
-                                console.warn("🚨 No summons found for this plate:", plateNumber);
-                                listContainer.innerHTML = "<p>No summons found for this plate.</p>";
-                                return;
-                            }
-
-                            data.forEach((summons, index) => {
-                                console.log(`✅ Creating card for Notice No: ${summons.noticeNo}`);
-
-                                let card = document.createElement("div");
-                                card.classList.add("summons-card");
-
-                                card.innerHTML = `
-                    <div class="checkbox-container">
-                        <input type="checkbox" id="summon_${index}" value="${summons.noticeNo}" data-amount="${summons.amount}">
-                        <h3>Notice No.: ${summons.noticeNo}</h3>
-                    </div>
-                    <p><strong>Vehicle No.:</strong> ${plateNumber}</p>
-                    <p><strong>Offences Act:</strong> ${summons.offence}</p>
-                    <p><strong>Offences Date:</strong> ${summons.date}</p>
-                    <p><strong>Amount:</strong> RM${summons.amount}</p>
-                `;
-
-                                listContainer.appendChild(card);
-                            });
-
-                            console.log("✅ Summons list updated successfully.");
-                        })
-                        .catch(error => console.error("❌ Error fetching summons data:", error));
-                }
-
-                function generatePaymentQR() {
-                    let selectedSummons = [];
-                    let totalAmount = 0;
-
-                    document.querySelectorAll("input[type=checkbox]:checked").forEach(checkbox => {
-                        selectedSummons.push(checkbox.value);
-                        totalAmount += parseFloat(checkbox.getAttribute("data-amount"));
-                    });
-
-                    if (selectedSummons.length === 0) {
-                        alert("Please select at least one summons.");
-                        return;
-                    }
-
-                    fetch("/api/payment/generate-qr", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ summons: selectedSummons, totalAmount })
-                    })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.paymentUrl) {
-                                document.getElementById("paymentQRCode").innerHTML = `
-                <p><strong>Scan QR to Pay:</strong></p>
-                <img src="https://api.qrserver.com/v1/create-qr-code/?data=${encodeURIComponent(data.paymentUrl)}&size=200x200">
-                <p><a href="${data.paymentUrl}" target="_blank">Click here if QR does not scan</a></p>
-            `;
-                            } else {
-                                alert("Failed to generate payment QR code.");
-                            }
-                        })
-                        .catch(error => console.error("Payment Error:", error));
                 }
 
                 function exportToPDF() {

@@ -15,6 +15,7 @@ from reportlab.platypus import Table, TableStyle, SimpleDocTemplate, Paragraph, 
 from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
+from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # Change this to a secure key
@@ -444,12 +445,17 @@ def receive_gps():
     global gps_logs
     data = request.json
     if data:
-        gps_logs.append(data)  # ✅ Store received GPS data
-        if len(gps_logs) > 10:  # ✅ Keep only last 10 entries to prevent memory overflow
-            gps_logs.pop(0)  # Remove oldest entry
+        # ✅ Inject fixed scan car plate and timestamp
+        data["plate"] = "VMD9454"
+        data["time"] = data.get("time") or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        print(f"📡 GPS Data Received: {data}")  # Debugging
+        gps_logs.append(data)
+        if len(gps_logs) > 1000:
+            gps_logs.pop(0)
+
+        print(f"📡 GPS Data Received: {data}")  # Debug log
         return jsonify({"status": "success"}), 200
+
     return jsonify({"error": "No data received"}), 400
 
 @app.route("/api/gps/logs", methods=["GET"])
@@ -500,34 +506,38 @@ def gps_tracking_history():
     start = request.args.get("start")
     end = request.args.get("end")
 
-    # If no filter applied, return all for testing
     filtered = gps_logs
-
-    # If needed, apply filter
     if plate:
         filtered = [g for g in filtered if g.get("plate") == plate]
     if start and end:
         filtered = [g for g in filtered if start <= g.get("time", "") <= end]
 
-    # Format for playback
     formatted = [{
-        "lat": g["latitude"],
-        "lng": g["longitude"],
+        "latitude": g["latitude"],
+        "longitude": g["longitude"],
         "time": g["time"],
         "speed": g.get("speed", 0)
     } for g in filtered if "latitude" in g and "longitude" in g]
 
-    return jsonify(formatted)
+    return jsonify(formatted)  # ✅ Correctly indented now
+
 
 @app.route("/queue-summons")
 def redirect_to_dashboard_summons():
     plate = request.args.get("plate")
-
     if not plate:
         return "Missing plate number", 400
-
     return redirect(f"/?plate={plate}&view=summons-payment")
 
+@app.route("/qr-payment")
+def qr_payment_view():
+    url = request.args.get("url")
+    return render_template("qr_payment.html", qr_url=url)
+
+@app.route("/summons-payment")
+def standalone_summons_payment():
+    plate = request.args.get("plate")
+    return render_template("summons_payment.html", plate=plate)
 
 
 if __name__ == "__main__":

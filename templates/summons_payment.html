@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Summons Payment</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- QRCode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #ffffff;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .fullscreen {
+            width: 100vw;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #031d67;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .summons-header.center-only {
+            justify-content: center;
+            margin-top: 5px;
+            margin-bottom: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #031d67;
+        }
+
+        .summons-list-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            width: 90%;
+            max-width: 1000px;
+            margin-bottom: 80px;
+        }
+
+        .summons-card {
+            background: #ffffff;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+            padding: 20px;
+        }
+
+        .summons-card h3 {
+            font-size: 16px;
+            color: #031d67;
+            margin-bottom: 8px;
+        }
+
+        .summons-card p {
+            font-size: 14px;
+            margin: 4px 0;
+            color: #444;
+        }
+
+        .checkbox-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        #selectAllCheckbox {
+            margin-right: 6px;
+        }
+
+        .summons-actions {
+            position: fixed;
+            bottom: 20px;
+            background: white;
+            width: 100%;
+            padding: 10px 0;
+            box-shadow: 0px -2px 10px rgba(0, 0, 0, 0.05);
+            justify-content: center;
+            display: flex;
+            z-index: 100;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+            border: none;
+            cursor: pointer;
+        }
+
+        .pay-btn {
+            background: #031d67;
+            color: white;
+        }
+
+        .pay-btn:hover {
+            background: #002b8a;
+        }
+
+        .qrcode-container {
+            margin-top: 15px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="summons-payment" class="fullscreen">
+        <h2 class="page-title">Summons Payment</h2>
+
+        <div style="text-align: center; margin-bottom: 15px;">
+            <label>
+                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll(this)">
+                <strong>Select All</strong>
+            </label>
+        </div>
+
+        <div class="summons-header center-only">
+            <h3>Summons Details for: <span id="plateNumber">{{ plate }}</span></h3>
+        </div>
+
+        <div class="summons-list-container" id="summonsList"></div>
+
+        <div class="summons-actions">
+            <button class="btn pay-btn" onclick="generatePaymentQR()">💳 Pay Selected</button>
+            <div id="paymentQRCode" class="qrcode-container"></div>
+        </div>
+    </div>
+
+    <script>
+        const plateNumber = "{{ plate }}";
+
+        document.addEventListener("DOMContentLoaded", function () {
+            document.getElementById("plateNumber").innerText = plateNumber;
+            fetchSummonsData(plateNumber);
+        });
+
+        function fetchSummonsData(plate) {
+            fetch(`/summons?plate=${plate}`)
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById("summonsList");
+                    container.innerHTML = "";
+
+                    if (!data.length) {
+                        container.innerHTML = "<p>No summons found.</p>";
+                        return;
+                    }
+
+                    data.forEach((summons, i) => {
+                        const card = document.createElement("div");
+                        card.classList.add("summons-card");
+
+                        card.innerHTML = `
+                            <div class="checkbox-container">
+                                <input type="checkbox" id="summon_${i}" value="${summons.noticeNo}" data-amount="${summons.amount}">
+                                <h3>Notice No.: ${summons.noticeNo}</h3>
+                            </div>
+                            <p><strong>Vehicle No.:</strong> ${plate}</p>
+                            <p><strong>Offence:</strong> ${summons.offence}</p>
+                            <p><strong>Date:</strong> ${summons.date}</p>
+                            <p><strong>Amount:</strong> RM${summons.amount}</p>
+                        `;
+
+                        container.appendChild(card);
+                    });
+                });
+        }
+
+        function toggleSelectAll(master) {
+            document.querySelectorAll("#summonsList input[type='checkbox']").forEach(cb => cb.checked = master.checked);
+        }
+
+        function generatePaymentQR() {
+            let selected = [];
+            let totalAmount = 0;
+
+            document.querySelectorAll("input[type='checkbox']:checked").forEach(cb => {
+                selected.push(cb.value);
+                totalAmount += parseFloat(cb.getAttribute("data-amount")) || 0;
+            });
+
+            if (!selected.length) {
+                alert("Please select at least one summons.");
+                return;
+            }
+
+            fetch("/api/payment/generate-qr", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    plateNumber,
+                    totalAmount,
+                    summons: selected
+                })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.paymentUrl) {
+                        window.location.href = data.paymentUrl;
+                    } else {
+                        alert("Failed to generate payment QR.");
+                    }
+                })
+                .catch(error => {
+                    console.error("Payment Error:", error);
+                    alert("An error occurred while processing payment.");
+                });
+        }
+    </script>
+</body>
+
+</html>
