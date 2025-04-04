@@ -1654,5 +1654,93 @@
         "start_time": "2025-03-28 09:55:22",
         "idle_time": "2025-03-28 09:55:22",
         "end_time": null
+    },
+    {
+        "latitude": 3.207738122,
+        "longitude": 101.77991004,
+        "speed": 0.0,
+        "start_time": "2025-03-28 10:29:48",
+        "idle_time": "2025-03-28 10:29:48",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207738122,
+        "longitude": 101.77991004,
+        "speed": 0.0,
+        "start_time": "2025-03-28 10:29:48",
+        "idle_time": "2025-03-28 10:29:48",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207738122,
+        "longitude": 101.77991004,
+        "speed": 0.0,
+        "start_time": "2025-03-28 10:29:48",
+        "idle_time": "2025-03-28 10:29:48",
+        "end_time": null
+    },
+    {
+        "latitude": 3.2077337986000005,
+        "longitude": 101.77990490600001,
+        "speed": 0.0,
+        "start_time": "2025-03-28 10:29:48",
+        "idle_time": "2025-03-28 10:29:48",
+        "end_time": null
+    },
+    {
+        "latitude": 3.2077356044000003,
+        "longitude": 101.77990490600001,
+        "speed": 0.0,
+        "start_time": "2025-03-28 10:29:48",
+        "idle_time": "2025-03-28 10:29:48",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207759277,
+        "longitude": 101.779866379,
+        "speed": 0.0,
+        "start_time": "2025-03-28 10:38:13",
+        "idle_time": "2025-03-28 10:38:13",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207759277,
+        "longitude": 101.779866379,
+        "speed": 0.0,
+        "start_time": "2025-03-28 10:38:13",
+        "idle_time": "2025-03-28 10:38:13",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207759277,
+        "longitude": 101.779866379,
+        "speed": 0.0,
+        "start_time": "2025-03-28 10:38:13",
+        "idle_time": "2025-03-28 10:38:13",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207759277,
+        "longitude": 101.779866379,
+        "speed": 0.0,
+        "start_time": "2025-03-28 10:38:13",
+        "idle_time": "2025-03-28 10:38:13",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207759277,
+        "longitude": 101.779866379,
+        "speed": 0.0,
+        "start_time": "2025-03-28 10:38:13",
+        "idle_time": "2025-03-28 10:38:13",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207759277,
+        "longitude": 101.779866379,
+        "speed": 0.0,
+        "start_time": "2025-03-28 10:38:13",
+        "idle_time": "2025-03-28 10:38:13",
+        "end_time": null
     }
 ]
