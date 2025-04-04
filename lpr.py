@@ -16,6 +16,7 @@ from reportlab.lib.pagesizes import A4, landscape
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from datetime import datetime
+import numpy as np  # Added for motion detection
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # Change this to a secure key
@@ -45,6 +46,13 @@ frame_queue = Queue(maxsize=1)  # Increased queue size
 gps_logs = []  # ✅ Store latest GPS readings
 stored_officer_id = "Unknown"  # ✅ Store officer ID globally
 
+# API Logging Stats
+api_stats = {
+    "success_count": 0,
+    "failure_count": 0,
+    "total_time": 0.0
+}
+
 # API Throttler
 class Throttler:
     def __init__(self, rate_limit, interval=1):
@@ -61,7 +69,20 @@ class Throttler:
             time.sleep(self.interval - (now - self.timestamps[0]))
         self.timestamps.append(now)
 
-throttler = Throttler(rate_limit=1, interval=1)  # 8 API calls per second
+throttler = Throttler(rate_limit=8, interval=1)  # 8 API calls per second
+
+def crop_plate_region(frame):
+    h, w, _ = frame.shape
+    return frame[int(h * 0.5):int(h * 0.95), int(w * 0.2):int(w * 0.8)]
+
+recent_plates = {}
+
+def is_duplicate_plate(plate, cooldown=10):
+    now = time.time()
+    if plate in recent_plates and now - recent_plates[plate] < cooldown:
+        return True
+    recent_plates[plate] = now
+    return False
 
 # Initialize camera
 try:
@@ -109,31 +130,36 @@ def dashboard():
 # License Plate Recognition
 def recognize_plate(frame):
     throttler.wait()
-
     try:
-        _, img_encoded = cv2.imencode(".jpg", frame, [int(cv2.IMWRITE_JPEG_QUALITY), 50])  # ✅ Reduce quality for faster upload
-        img_bytes = img_encoded.tobytes()  # ✅ Convert image to bytes
+        start_time = time.time()
+        roi = crop_plate_region(frame)
+        _, img_encoded = cv2.imencode(".jpg", roi, [int(cv2.IMWRITE_JPEG_QUALITY), 25])
+        img_bytes = img_encoded.tobytes()
 
         print("📤 Sending image to Plate Recognizer API...")
 
         response = requests.post(
             PLATE_RECOGNIZER_API_URL,
-            files={"upload": ("image.jpg", img_bytes, "image/jpeg")},  # ✅ Correct image upload
+            files={"upload": ("image.jpg", img_bytes, "image/jpeg")},
             headers={"Authorization": f"Token {API_TOKEN}"},
-            timeout=30  # ✅ Increased timeout
+            timeout=30
         )
 
-        print(f"📥 API Response Code: {response.status_code}")
-        print(f"📥 API Response Data: {response.text}")
+        elapsed = time.time() - start_time
+        api_stats["total_time"] += elapsed
 
         if response.status_code == 201:
+            api_stats["success_count"] += 1
+            print(f"✅ Plate Recognizer Success in {elapsed:.2f}s | Total Success: {api_stats['success_count']}")
             return response.json().get("results", [])
-
-        print("⚠️ Plate Recognizer API did not return a plate.")
-        return []
+        else:
+            api_stats["failure_count"] += 1
+            print(f"❌ API Error {response.status_code} in {elapsed:.2f}s | Total Failures: {api_stats['failure_count']}")
+            return []
 
     except requests.exceptions.RequestException as e:
-        print(f"⚠️ Plate recognition request failed: {e}")
+        api_stats["failure_count"] += 1
+        print(f"❌ Request Exception: {e} | Total Failures: {api_stats['failure_count']}")
         return []
 
 def check_parking_status(plate_number):
@@ -171,39 +197,41 @@ def check_summons_status(plate_number):
         print(f"Summons API failed: {e}")
         return []
 
-# Process frames asynchronously
-def process_frames():
-    global stored_officer_id  # ✅ Use the global officer ID
+# Frame processing
 
+def process_frames():
+    global stored_officer_id
     while True:
         if not frame_queue.empty():
             frame = frame_queue.get()
             plates = recognize_plate(frame)
 
             for plate_data in plates:
-                plate_number = plate_data.get("plate", "").upper()  # ✅ Ensure plate_number is assigned
+                plate_number = plate_data.get("plate", "").upper()
 
-                if not plate_number:  # ✅ Skip if no plate is detected
+                if not plate_number:
                     print("⚠️ No plate detected, skipping...")
-                    continue  
+                    continue
+
+                if is_duplicate_plate(plate_number):
+                    print(f"⚠️ Recently detected {plate_number}, skipping duplicate.")
+                    continue
 
                 with lock:
                     if any(p["plate"] == plate_number for p in detected_plates):
-                        continue  # ✅ Avoid duplicate entries
+                        continue
 
                 timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
                 snapshot_name = f"{plate_number}_{int(time.time())}.jpg"
                 snapshot_path = os.path.join(app.config["SNAPSHOT_FOLDER"], snapshot_name)
                 cv2.imwrite(snapshot_path, frame)
 
-                # ✅ Get latest GPS data
                 latitude, longitude = None, None
                 if gps_logs:
-                    latest_gps = gps_logs[-1]  # Get last received GPS log
+                    latest_gps = gps_logs[-1]
                     latitude = latest_gps.get("latitude")
                     longitude = latest_gps.get("longitude")
 
-                # ✅ Use global officer ID instead of session
                 officer_id = stored_officer_id
 
                 parking_status = check_parking_status(plate_number)
@@ -211,14 +239,14 @@ def process_frames():
 
                 with lock:
                     detected_plates.append({
-                        "plate": plate_number,  # ✅ This is now properly defined
+                        "plate": plate_number,
                         "status": parking_status,
                         "summons": summons_status,
                         "time": timestamp,
                         "snapshot": snapshot_path,
-                        "latitude": latitude,  # ✅ Include GPS data
-                        "longitude": longitude,  # ✅ Include GPS data
-                        "officer_id": officer_id  # ✅ Include Officer ID
+                        "latitude": latitude,
+                        "longitude": longitude,
+                        "officer_id": officer_id
                     })
 
     print(f"✅ Added Detected Plate: {detected_plates[-1]}")  # 🔍 Debugging log
@@ -231,7 +259,7 @@ def generate_frames():
         yield b"Camera not initialized."
         return
 
-    frame_skip = 1  # Process every nth frame
+    frame_skip = 30  # Process every nth frame
     count = 0
 
     while True:
@@ -538,6 +566,20 @@ def qr_payment_view():
 def standalone_summons_payment():
     plate = request.args.get("plate")
     return render_template("summons_payment.html", plate=plate)
+
+@app.route("/api/lpr-stats", methods=["GET"])
+def get_lpr_stats():
+    total = api_stats["success_count"] + api_stats["failure_count"]
+    average_time = (
+        api_stats["total_time"] / api_stats["success_count"]
+        if api_stats["success_count"] > 0 else 0
+    )
+    return jsonify({
+        "total_calls": total,
+        "successful_calls": api_stats["success_count"],
+        "failed_calls": api_stats["failure_count"],
+        "average_response_time_sec": round(average_time, 2)
+    })
 
 
 if __name__ == "__main__":
