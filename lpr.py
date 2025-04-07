@@ -1,5 +1,9 @@
 from flask import Flask, render_template, Response, jsonify, request, redirect, url_for, session, send_file
-from picamera2 import Picamera2
+import platform
+
+if platform.system() == "Linux":
+    from picamera2 import Picamera2
+
 import cv2
 import time
 import threading
