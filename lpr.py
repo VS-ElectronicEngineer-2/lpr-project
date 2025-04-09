@@ -77,7 +77,7 @@ throttler = Throttler(rate_limit=8, interval=1)  # 8 API calls per second
 
 def crop_plate_region(frame):
     h, w, _ = frame.shape
-    return frame[int(h * 0.5):int(h * 0.95), int(w * 0.2):int(w * 0.8)]
+    return frame[int(h * 0.1):int(h * 0.99), int(w * 0.01):int(w * 0.99)]
 
 recent_plates = {}
 
@@ -263,7 +263,7 @@ def generate_frames():
         yield b"Camera not initialized."
         return
 
-    frame_skip = 30  # Process every nth frame
+    frame_skip = 1  # Process every nth frame
     count = 0
 
     while True:
@@ -286,7 +286,11 @@ def generate_frames():
 
 @app.route("/video_feed")
 def video_feed():
-    return Response(generate_frames(), mimetype="multipart/x-mixed-replace; boundary=frame")
+    return Response(
+        generate_frames(),
+        mimetype="multipart/x-mixed-replace; boundary=frame",
+        headers={"Cache-Control": "no-cache, no-store, must-revalidate"}
+    )
 
 @app.route("/plates", methods=["GET"])
 def plates():
@@ -585,6 +589,19 @@ def get_lpr_stats():
         "average_response_time_sec": round(average_time, 2)
     })
 
+@app.route('/reset-system', methods=['POST'])
+def reset_system():
+    global detected_plates, gps_logs
+    detected_plates.clear()
+    gps_logs.clear()
+    
+    # 🧹 Delete all snapshot images
+    folder = 'static/snapshots'
+    for f in os.listdir(folder):
+        if f.endswith('.jpg') or f.endswith('.png'):
+            os.remove(os.path.join(folder, f))
+    
+    return jsonify({'message': 'System has been reset!'})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=False)
