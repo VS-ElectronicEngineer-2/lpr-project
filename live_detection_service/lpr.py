@@ -99,6 +99,19 @@ except Exception as e:
     print(f"Camera initialization failed: {e}")
     picam2 = None
 
+def send_gps_to_dashboard(data):
+    try:
+        for url in ["http://192.168.8.108:5002/api/gps", "http://localhost:5002/api/gps"]:
+            response = requests.post(url, json=data, timeout=5)
+            if response.status_code == 200:
+                print("📡 GPS forwarded to dashboard successfully:", url)
+                return
+        print("❌ All dashboard URLs failed")
+    except Exception as e:
+        print("❌ Error sending GPS to dashboard:", e)
+
+
+
 # Authentication Routes
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -203,6 +216,8 @@ def check_summons_status(plate_number):
 
 # Frame processing
 
+# ✅ Insert this updated section inside your `process_frames()` function
+
 def process_frames():
     global stored_officer_id
     while True:
@@ -241,19 +256,39 @@ def process_frames():
                 parking_status = check_parking_status(plate_number)
                 summons_status = check_summons_status(plate_number)
 
-                with lock:
-                    detected_plates.append({
-                        "plate": plate_number,
-                        "status": parking_status,
-                        "summons": summons_status,
-                        "time": timestamp,
-                        "snapshot": snapshot_path,
-                        "latitude": latitude,
-                        "longitude": longitude,
-                        "officer_id": officer_id
-                    })
+                # ✅ Create single dictionary
+                plate_info = {
+                    "plate": plate_number,
+                    "status": parking_status,
+                    "summons": summons_status,
+                    "time": timestamp,
+                    "snapshot": f"http://192.168.8.108:5001/{snapshot_path}",
+                    "latitude": latitude,
+                    "longitude": longitude,
+                    "officer_id": officer_id
+                }
 
-    print(f"✅ Added Detected Plate: {detected_plates[-1]}")  # 🔍 Debugging log
+                with lock:
+                    detected_plates.append(plate_info)
+                    send_plate_to_dashboard(plate_info)  # ✅ Send to dashboard after appending
+
+                print(f"✅ Added Detected Plate: {plate_info}")
+
+
+# ✅ Helper to send data to dashboard
+
+def send_plate_to_dashboard(plate_info):
+    try:
+        # You can change to the real dashboard IP later (e.g., http://<azure-ip>:5002/api/receive-plate)
+        dashboard_url = "http://localhost:5002/api/receive-plate"
+        response = requests.post(dashboard_url, json=plate_info, timeout=5)
+        if response.status_code == 200:
+            print("📤 Sent to dashboard successfully")
+        else:
+            print(f"❌ Dashboard responded with {response.status_code}")
+    except Exception as e:
+        print("❌ Failed to send to dashboard:", e)
+
 
 threading.Thread(target=process_frames, daemon=True).start()
 
@@ -331,6 +366,11 @@ def get_summons():
     
     print("📌 API Returning Summons Data:", summons_data)  # ✅ Debugging log
     return jsonify(summons_data)  # Reverse to show latest first
+
+@app.route("/api/received-plates", methods=["GET"])
+def get_received_plates():
+    with lock:
+        return jsonify(list(reversed(detected_plates)))
 
 @app.route("/download/excel/detected_plates", methods=["GET"])
 def download_detected_plates_excel():
@@ -489,6 +529,8 @@ def receive_gps():
         if len(gps_logs) > 1000:
             gps_logs.pop(0)
 
+        send_gps_to_dashboard(data)  # ✅ Send to dashboard
+
         print(f"📡 GPS Data Received: {data}")  # Debug log
         return jsonify({"status": "success"}), 200
 
@@ -602,6 +644,8 @@ def reset_system():
             os.remove(os.path.join(folder, f))
     
     return jsonify({'message': 'System has been reset!'})
+
+    
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=False)

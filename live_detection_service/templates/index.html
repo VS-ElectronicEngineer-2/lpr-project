@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>License Plate Recognition Dashboard</title>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+        }
+
+        header {
+            background-color: #fff;
+            padding: 10px 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #031d67;
+        }
+
+        .profile {
+            position: relative;
+            display: inline-block;
+        }
+
+        .profile-btn {
+            background-color: #031d67;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .dropdown {
+            display: none;
+            position: absolute;
+            right: 0;
+            background-color: #fff;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            min-width: 180px;
+            z-index: 1;
+            border-radius: 6px;
+            margin-top: 5px;
+        }
+
+        .dropdown a {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            text-decoration: none;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .dropdown a:hover {
+            background-color: #f0f0f0;
+        }
+
+        .profile:hover .dropdown {
+            display: block;
+        }
+
+        .dashboard {
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+        }
+
+        .left,
+        .right {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .left {
+            flex: 1;
+        }
+
+        .right {
+            flex: 1;
+            overflow-x: auto;
+        }
+
+        .live-video {
+            width: 100%;
+            height: 500px;
+            object-fit: cover;
+            border-radius: 10px;
+            background: #eee;
+        }
+
+        .controls {
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+
+        .btn.start {
+            background-color: green;
+        }
+
+        .btn.stop {
+            background-color: red;
+        }
+
+        .btn.reset {
+            background-color: orange;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 14px;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #ccc;
+        }
+
+        th {
+            background-color: #031d67;
+            color: white;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <div class="title">License Plate Recognition Dashboard</div>
+        <div class="profile">
+            <button class="profile-btn">HM</button>
+            <div class="dropdown">
+                <a href="#"><span>⚙️</span>&nbsp; Account Settings</a>
+                <a href="/logout"><span>📤</span>&nbsp; Logout</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="dashboard">
+        <div class="left">
+            <h2>Live Stream</h2>
+            <img id="liveStreamVideo" src="/video_feed" class="live-video" alt="Live Stream">
+            <div class="controls">
+                <button class="btn start" onclick="startLiveStream()">Start</button>
+                <button class="btn stop" onclick="stopLiveStream()">Stop</button>
+                <button class="btn reset" onclick="resetSystem()">Reset Queue</button>
+            </div>
+        </div>
+
+        <div class="right">
+            <h2>Detected Plates & Summons Queue (Live)</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>License Plate</th>
+                        <th>Status</th>
+                        <th>Time</th>
+                        <th>Total Summons</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody id="livestreamTable"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const { jsPDF } = window.jspdf;
+
+        function startLiveStream() {
+            document.getElementById("liveStreamVideo").src = "/video_feed";
+        }
+
+        function stopLiveStream() {
+            document.getElementById("liveStreamVideo").src = "";
+        }
+
+        function resetSystem() {
+            if (confirm("Reset system?")) {
+                fetch('/reset-system', { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert(data.message);
+                        fetchData();
+                    });
+            }
+        }
+
+        function fetchData() {
+            fetch("/plates")
+                .then(response => response.json())
+                .then(detectedData => {
+                    fetch("/summons")
+                        .then(response => response.json())
+                        .then(summonsData => {
+                            let livestreamTable = document.getElementById("livestreamTable");
+                            livestreamTable.innerHTML = ""; // Clear previous data
+
+                            let allPlates = []; // Store plates with queue numbers
+
+                            // Combine detected plates and summons
+                            detectedData.forEach(plate => {
+                                allPlates.push({
+                                    plate: plate.plate,
+                                    status: plate.status,
+                                    time: plate.time,
+                                    isScofflaw: false,
+                                    summonsNo: "" // Default empty
+                                });
+                            });
+
+                            // Mark summons plates and assign queue numbers
+                            let scofflawQueue = 1; // Start summons queue at 1
+                            summonsData.forEach(summon => {
+                                let existing = allPlates.find(p => p.plate === summon.plate);
+                                if (existing) {
+                                    existing.status = "Scofflaw";
+                                    existing.isScofflaw = true;
+                                    existing.summonsNo = `${scofflawQueue}`; // Assign queue number
+                                    scofflawQueue++;
+                                } else {
+                                    allPlates.push({
+                                        plate: summon.plate,
+                                        status: "Scofflaw",
+                                        time: "N/A",
+                                        isScofflaw: true,
+                                        summonsNo: `${scofflawQueue}`
+                                    });
+                                    scofflawQueue++;
+                                }
+                            });
+
+                            // Display with queue numbers
+                            allPlates.forEach((entry, index) => {
+                                let statusColor = entry.status.includes("Not Paid") ? "red" :
+                                    entry.status.includes("Paid") ? "green" :
+                                        "blue";  // Default blue for scofflaw
+
+                                let summonsColumn = entry.isScofflaw ? entry.summonsNo : "-"; // Show queue number for scofflaw only
+
+                                let actionButton = entry.isScofflaw
+                                    ? `<button onclick="generatePDF('${entry.plate}')" 
+       style="background: blue; color: white; border: none; padding: 5px; cursor: pointer;">
+       Download PDF
+    </button>`
+                                    : "-";
+
+                                console.log(`📥 Adding Download Button for: ${entry.plate}`); // ✅ Debugging Log
+
+                                let rowHTML = `
+    <tr>
+        <td>${index + 1}</td>
+        <td style="color:${statusColor}; font-weight:bold;">${entry.plate}</td>
+        <td style="color:${statusColor}; font-weight:bold;">${entry.status}</td>
+        <td style="color:${statusColor}; font-weight:bold;">${entry.time}</td>
+        <td>${summonsColumn}</td>
+        <td>${actionButton}</td> <!-- ✅ Ensure this is added correctly -->
+    </tr>`;
+
+                                livestreamTable.innerHTML += rowHTML;
+
+                            });
+                        });
+                });
+        }
+
+
+        window.generatePDF = function (plateNumber) {
+            console.log(`📥 Generating PDF for plate: ${plateNumber}`);
+
+            if (!window.jspdf || !window.QRCode) {
+                console.error("❌ jsPDF or QRCode is missing!");
+                alert("Error: jsPDF or QRCode library is missing.");
+                return;
+            }
+
+            console.log("🔄 Fetching summons data from API...");
+            fetch(`/summons?plate=${plateNumber}`)
+                .then(response => response.json())
+                .then(async summonsData => {
+                    console.log("📌 API Response:", summonsData);
+
+                    if (!Array.isArray(summonsData) || summonsData.length === 0) {
+                        alert("No summons found for this plate.");
+                        return;
+                    }
+
+                    console.log("✅ Proceeding with PDF generation...");
+
+                    const { jsPDF } = window.jspdf;
+                    const doc = new jsPDF("p", "mm", "a4"); // A4 Portrait Mode
+
+                    // ✅ Watermark Image
+                    const watermarkURL = "/static/citycarpark-watermark.png";  // or use "/static/citycarpark-watermark.png"
+
+                    const pageHeight = doc.internal.pageSize.getHeight();
+
+                    // ✅ Add watermark behind content
+                    doc.addImage(watermarkURL, "PNG", 25, 60, 160, 160, "", "NONE", 0.1);
+
+                    if (!doc.autoTable) {
+                        alert("Error: jsPDF autoTable plugin is missing.");
+                        return;
+                    }
+
+                    // ✅ Adjusted Logo to Slim and Centered (width 20, height 40)
+                    const logoWidth = 20;
+                    const logoHeight = 40;
+                    const pageWidth = doc.internal.pageSize.getWidth();
+                    const centerX = (pageWidth - logoWidth) / 2;
+
+                    const logoURL = "/static/mbklogo.png";
+                    doc.addImage(logoURL, "PNG", centerX, 10, logoWidth, logoHeight);
+
+                    // ✅ Add Title Below Logo
+                    doc.setFontSize(12);
+                    doc.setFont("helvetica", "bold");
+                    doc.text("NOTIS TERTUNGGAK", pageWidth / 2, 55, { align: "center" });
+                    doc.text("KESALAHAN DI BAWAH AKTA PENGANGKUTAN JALAN 1987 PERINTAH", pageWidth / 2, 63, { align: "center" });
+                    doc.text("PENGANGKUTAN JALAN (PERUNTUKAN TEMPAT LETAK KERETA)(MAJLIS", pageWidth / 2, 71, { align: "center" });
+                    doc.text("PERBANDARAN KUANTAN) 2005", pageWidth / 2, 79, { align: "center" });
+
+                    // ✅ Document Metadata (Aligned Properly)
+                    let startY = 90;
+                    doc.setFontSize(11);
+                    doc.setFont("helvetica", "normal");
+                    doc.text("Tarikh Cetak :", 15, startY);
+                    doc.text(new Date().toISOString().split('T')[0], 50, startY); // Right-aligned date
+
+                    doc.text("No Pendaftaran Kenderaan :", 15, startY + 6);
+                    doc.text(plateNumber, 70, startY + 6); // Right-aligned plate number
+
+                    // ✅ Explanation Text
+                    let tableY = startY + 16;
+                    doc.setFontSize(10);
+                    doc.text("BAHAWASANYA saya mempunyai alasan yang munasabah untuk mempercayai bahawa", 15, tableY);
+                    doc.text("anda telah melakukan kesalahan seperti berikut:", 15, tableY + 5);
+
+                    tableY += 10;
+
+                    // ✅ Table Formatting (Properly Aligned)
+                    doc.autoTable({
+                        startY: tableY,
+                        head: [["Bil", "Tarikh", "No. Kompaun", "Kesalahan", "Lokasi", "Jumlah (RM)"]],
+                        body: summonsData.map((summon, index) => [
+                            `${index + 1}.`,
+                            summon.date || "-",
+                            summon.noticeNo || "-",
+                            `PERINTAH ${summon.offence || "-"}`, // ✅ Prepend "PERINTAH" before the offence number
+                            summon.location || "-",
+                            `RM${(summon.amount || "0").toString().replace(/[^\d.]/g, "")}`
+
+                        ]),
+                        styles: {
+                            fontSize: 9, // ✅ Smaller font for compact look
+                            lineWidth: 0.3, // ✅ Thinner Borders
+                            cellPadding: 2, // ✅ Less Padding
+                            valign: "middle",
+                            textColor: [0, 0, 0] // ✅ Black text
+                        },
+                        headStyles: {
+                            fillColor: [255, 255, 255], // ✅ No Background Color
+                            textColor: [0, 0, 0], // ✅ Black Text for Headers
+                            fontSize: 10,
+                            fontStyle: "bold",
+                            lineWidth: 0.4 // ✅ Slightly Darker Borders
+                        },
+                        columnStyles: {
+                            0: { cellWidth: 9, halign: "center" },  // ✅ Narrow "Bil" column
+                            1: { cellWidth: 20, halign: "center" }, // ✅ Compact "Tarikh"
+                            2: { cellWidth: 30, halign: "center" }, // ✅ "No. Kompaun" fits properly
+                            3: { cellWidth: 30, halign: "left" },   // ✅ "Kesalahan" not too wide
+                            4: { cellWidth: 50, halign: "center" }, // ✅ "Lokasi" aligned well
+                            5: { cellWidth: 20, halign: "right" }   // ✅ "Jumlah" column fits neatly
+                        },
+                        theme: "grid"
+                    });
+
+                    // ✅ Calculate total amount
+                    let totalAmount = summonsData.reduce((sum, summon) => {
+                        let amount = (summon.amount || "0").toString().replace(/[^\d.]/g, ""); // Remove non-numeric characters
+                        return sum + (parseFloat(amount) || 0);
+                    }, 0);
+                    let finalY = doc.lastAutoTable.finalY + 10;
+                    doc.setFontSize(11);
+                    doc.setFont("helvetica", "bold");
+                    doc.text(`Jumlah Keseluruhan: RM${totalAmount ? totalAmount.toFixed(2) : "0.00"}`, 120, finalY);
+
+                    // ✅ Bold & Underlined Text for Legal Warning
+                    finalY += 15;
+                    doc.setFont("helvetica", "normal");
+                    doc.text("Tuan/Puan dikehendaki menyelesaikan segala tunggakan-tunggakan di atas dalam", 15, finalY);
+                    doc.text("tempoh 14 hari dari notis ini dikeluarkan. Sekiranya gagal berbuat demikian, tindakan", 15, finalY + 6);
+                    doc.text("undang-undang akan diambil.Jika ada pertanyaan, sila hubungi kami di talian 03-25128282", 15, finalY + 12);
+
+                    // ✅ Footer Section
+                    finalY += 25;
+                    doc.setFont("helvetica", "normal");
+                    doc.text("Sekian, terima kasih.", 15, finalY);
+
+                    // ✅ Generate QR Code for Summons Page
+                    console.log("🔄 Generating QR Code...");
+
+                    const qrCodeURL = `http://192.168.8.108:5001/summons-payment?plate=${plateNumber}`;
+
+                    try {
+                        let tempDiv = document.createElement("div"); // Temporary div for QR code generation
+                        let qrCode = new QRCode(tempDiv, {
+                            text: qrCodeURL,
+                            width: 120,
+                            height: 120,
+                            correctLevel: QRCode.CorrectLevel.H
+                        });
+
+                        setTimeout(() => {
+                            let qrCanvas = tempDiv.querySelector("canvas");
+                            if (qrCanvas) {
+                                let qrDataURL = qrCanvas.toDataURL("image/png"); // Convert QR to DataURL
+
+                                // ✅ Move QR Code Lower (closer to the bottom of the page)
+                                let qrYPosition = doc.internal.pageSize.getHeight() - 60; // Adjust Y position
+
+                                doc.addImage(qrDataURL, "PNG", 160, qrYPosition, 35, 35);
+                                doc.setFontSize(9).text("Sila imbas untuk pembayaran", 160, qrYPosition + 40);
+                                doc.setFontSize(8).text("Disediakan oleh CityCarPark", 160, qrYPosition + 50);
+                            } else {
+                                console.error("❌ QR Code Canvas Not Found");
+                            }
+
+                            // ✅ Always save the PDF, even if QR fails
+                            doc.save(`${plateNumber}_Summons.pdf`);
+                        }, 1000); // Delay to allow QR generation
+                    } catch (err) {
+                        console.error("❌ Error Generating QR Code:", err);
+                        doc.save(`${plateNumber}_Summons.pdf`); // Save PDF even if QR fails
+                    }
+                })
+                .catch(error => console.error("❌ Error fetching summons data:", error));
+        };
+
+
+        fetchData();
+        setInterval(fetchData, 5000);
+    </script>
+</body>
+
+</html>
