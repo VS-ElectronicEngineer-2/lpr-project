@@ -71,7 +71,7 @@
         /* 🔹 Top Bar */
         .topbar {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-start;
             align-items: center;
             padding: 10px 20px;
             background: white;
@@ -97,62 +97,6 @@
 
         .active {
             display: block;
-        }
-
-        /* 🔹 Profile Container */
-        .profile-container {
-            position: relative;
-            display: flex;
-            align-items: center;
-            cursor: pointer;
-        }
-
-        /* 🔹 Profile Icon */
-        .profile-icon {
-            width: 40px;
-            height: 40px;
-            background: #031d67;
-            color: white;
-            font-size: 16px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-left: 10px;
-        }
-
-        /* 🔹 Dropdown Menu */
-        .dropdown-menu {
-            display: none;
-            position: absolute;
-            top: 50px;
-            right: 0;
-            background: white;
-            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
-            border-radius: 10px;
-            width: 200px;
-            padding: 10px 0;
-            z-index: 1000;
-        }
-
-        /* 🔹 Dropdown Items */
-        .dropdown-menu a {
-            display: flex;
-            align-items: center;
-            padding: 12px 20px;
-            text-decoration: none;
-            color: black;
-            font-size: 14px;
-        }
-
-        /* 🔹 Hover Effect */
-        .dropdown-menu a:hover {
-            background: #f4f4f4;
-        }
-
-        /* 🔹 Icons Alignment */
-        .dropdown-menu a i {
-            margin-right: 10px;
         }
 
         /* 🔹 Live Stream & Tables Container */
@@ -436,10 +380,6 @@
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC_JZJCDkPLTUsb3vFKwKQzF_PDMW5gavY&callback=initTrackingMap"
         async defer></script>
 
-<body id="mainBody">
-
-</body>
-
 <body>
 
     <!-- 🔹 Sidebar -->
@@ -454,15 +394,6 @@
     <!-- 🔹 Top Bar -->
     <div class="topbar">
         <h1>License Plate Recognition Dashboard</h1>
-
-        <!-- 🔹 Profile & Logout Dropdown (Move Inside Top Bar) -->
-        <div class="profile-container" onclick="toggleDropdown()">
-            <span class="profile-icon">HM</span>
-            <div id="dropdown-menu" class="dropdown-menu">
-                <a href="#"><i>⚙️</i> Account Settings</a>
-                <a href="/logout"><i>🚪</i> Logout</a>
-            </div>
-        </div>
     </div>
 
     <!-- Main Content -->

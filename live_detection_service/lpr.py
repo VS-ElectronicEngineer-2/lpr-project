@@ -40,7 +40,7 @@ if not os.path.exists(app.config["SNAPSHOT_FOLDER"]):
 PLATE_RECOGNIZER_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
 PARKING_API_URL = "https://mycouncil.citycarpark.my/parking/ctcp/services-listerner_mbk.php"
 NODE_API_URL = "http://localhost:5000/api/summons"
-API_TOKEN = "31dec082ba6a3f72b16236de19f32d1559d743c9"
+API_TOKEN = "18cc09bdb0d72b43759a67ad9984a81ad2d153f0"
 PARKING_API_ACTION = "GetParkingRightByPlateVerify"
 
 detected_plates = []
@@ -101,7 +101,7 @@ except Exception as e:
 
 def send_gps_to_dashboard(data):
     try:
-        for url in ["http://192.168.8.108:5002/api/gps", "http://localhost:5002/api/gps"]:
+        for url in ["http://52.163.74.67:5002/api/gps"]:
             response = requests.post(url, json=data, timeout=5)
             if response.status_code == 200:
                 print("📡 GPS forwarded to dashboard successfully:", url)
@@ -280,7 +280,7 @@ def process_frames():
 def send_plate_to_dashboard(plate_info):
     try:
         # You can change to the real dashboard IP later (e.g., http://<azure-ip>:5002/api/receive-plate)
-        dashboard_url = "http://localhost:5002/api/receive-plate"
+        dashboard_url = "http://52.163.74.67:5002/api/receive-plate"
         response = requests.post(dashboard_url, json=plate_info, timeout=5)
         if response.status_code == 200:
             print("📤 Sent to dashboard successfully")
