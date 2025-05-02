@@ -404,17 +404,18 @@
             <h2>Dashboard</h2>
             <div class="dashboard-card">
                 <h3>Detected Plates & Summons Queue</h3>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                    <input type="text" id="dashboardSearch" placeholder="Search Plate..."
-                        onkeyup="filterDashboardTable()"
-                        style="padding: 8px; width: 200px; border-radius: 5px; border: 1px solid #ccc;">
-                    <div>
-                        <button class="modern-btn export-btn" onclick="exportDashboardToExcel()">📄 Export to
-                            Excel</button>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <div style="display: flex; gap: 10px;">
+                        <input type="date" id="dateFilter" onchange="fetchDashboardData(); filterDashboardTable()" class="modern-btn" style="width: 160px;">
+                        <input type="text" id="dashboardSearch" placeholder="Search Plate..." onkeyup="filterDashboardTable()"
+                            class="modern-btn" style="width: 200px;">
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="modern-btn export-btn" onclick="exportDashboardToExcel()">📄 Export to Excel</button>
                         <button class="modern-btn export-btn" onclick="exportDashboardToPDF()">🖨 Export to PDF</button>
                     </div>
                 </div>
-
+                
                 <table>
                     <thead>
                         <tr>
@@ -489,38 +490,19 @@
                     <button class="modern-btn stop-btn" onclick="stopPlayback()">⏹ Stop</button>
                 </div>
 
-                <div class="tracking-table-container scrollable-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Time</th>
-                                <th>Latitude</th>
-                                <th>Longitude</th>
-                                <th>Speed (km/h)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="historicalTrackingTable"></tbody>
-                    </table>
-                </div>
-                <!-- 🔶 Detected Idle Periods Table -->
-                <div style="margin-top: 30px;">
-                    <h4 style="color: goldenrod;">🟡 Detected Idle Periods</h4>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Idle Start</th>
-                                <th>Idle End</th>
-                                <th>Duration (sec)</th>
-                            </tr>
-                        </thead>
-                        <tbody id="idleTableBody">
-                            <!-- Will be populated by JS -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-
+<div class="tracking-table-container scrollable-table">
+    <table>
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Address (Latitude, Longitude)</th>
+                <th>Speed (km/h)</th>
+                <th>Parking Duration</th>
+            </tr>
+        </thead>
+        <tbody id="historicalPlaybackCombinedTable"></tbody>
+    </table>
+</div>
 
         <!-- 🔹 JavaScript -->
         <script>
@@ -621,17 +603,25 @@
             }
 
             function filterDashboardTable() {
-                const input = document.getElementById("dashboardSearch").value.toUpperCase();
-                const rows = document.querySelectorAll("#dashboardTable tr");
+    const inputPlate = document.getElementById("dashboardSearch").value.toUpperCase();
+    const inputDate = document.getElementById("dateFilter").value;
+    const rows = document.querySelectorAll("#dashboardTable tr");
 
-                rows.forEach(row => {
-                    const plateCell = row.querySelector("td");
-                    if (plateCell) {
-                        const plateText = plateCell.textContent || plateCell.innerText;
-                        row.style.display = plateText.toUpperCase().includes(input) ? "" : "none";
-                    }
-                });
-            }
+    rows.forEach(row => {
+        const plateCell = row.querySelector("td:nth-child(1)");
+        const timeCell = row.querySelector("td:nth-child(3)");
+
+        if (!plateCell || !timeCell) return;
+
+        const plateText = plateCell.textContent.toUpperCase();
+        const dateOnly = timeCell.textContent.trim().split(" ")[0]; // Get date part
+
+        const matchPlate = !inputPlate || plateText.includes(inputPlate);
+        const matchDate = !inputDate || dateOnly === inputDate;
+
+        row.style.display = (matchPlate && matchDate) ? "" : "none";
+    });
+}
 
             function exportDashboardToExcel() {
                 const rows = document.querySelectorAll("#dashboardTable tr");
@@ -1051,50 +1041,50 @@
                     playbackPath.getPath().push(new google.maps.LatLng(position.lat, position.lng));
                     historicalTrackingMap.panTo(position);
 
-                    // ✅ Append current GPS data to the historical tracking table
-                    const row = `<tr>
+                    const address = `${current.lat.toFixed(5)}, ${current.lng.toFixed(5)}`;
+                            let parkingDuration = "";
+
+                            if (current.speed < 5 && prev) {
+                                const timeDiff = new Date(current.time) - new Date(prev.time); // in ms
+
+                                if (!idleStartTime) {
+                                    idleStartTime = new Date(prev.time);
+                                }
+                                idleEndTime = new Date(current.time);
+
+                                const duration = (idleEndTime - idleStartTime) / 1000; // seconds
+                                if (duration > 10) {
+                                    parkingDuration = `${Math.floor(duration / 60)}min ${Math.round(duration % 60)}sec`;
+
+                                    idleEntries.push({
+                                        start: idleStartTime.toLocaleTimeString(),
+                                        end: idleEndTime.toLocaleTimeString(),
+                                        duration: Math.round(duration)
+                                    });
+
+                                    new google.maps.Marker({
+                                        position,
+                                        map: historicalTrackingMap,
+                                        title: `Idle (${parkingDuration})`,
+                                        icon: { url: "http://maps.google.com/mapfiles/ms/icons/orange-dot.png" }
+                                    });
+
+                                    idleStartTime = null;
+                                    idleEndTime = null;
+                                }
+                            } else {
+                                idleStartTime = null;
+                                idleEndTime = null;
+                            }
+
+                            const combinedRow = `<tr>
     <td>${current.time}</td>
-    <td>${current.lat.toFixed(6)}</td>
-    <td>${current.lng.toFixed(6)}</td>
-    <td>${current.speed}</td>
+    <td>${address}</td>
+    <td>${current.speed.toFixed(2)}</td>
+    <td>${parkingDuration}</td>
 </tr>`;
-                    document.getElementById("historicalTrackingTable").innerHTML += row;
 
-                    let parkingDuration = ""; // Default empty unless idle is detected
-
-                    if (current.speed < 5 && prev) {
-                        const timeDiff = new Date(current.time) - new Date(prev.time); // in ms
-
-                        if (!idleStartTime) {
-                            idleStartTime = new Date(prev.time);
-                        }
-                        idleEndTime = new Date(current.time);
-
-                        const duration = (idleEndTime - idleStartTime) / 1000; // seconds
-                        if (duration > 10) {
-                            parkingDuration = `${Math.floor(duration / 60)} min ${Math.round(duration % 60)} sec`;
-
-                            idleEntries.push({
-                                start: idleStartTime.toLocaleTimeString(),
-                                end: idleEndTime.toLocaleTimeString(),
-                                duration: Math.round(duration)
-                            });
-
-                            // Marker on idle spot
-                            new google.maps.Marker({
-                                position,
-                                map: historicalTrackingMap,
-                                title: `Idle (${parkingDuration})`,
-                                icon: { url: "http://maps.google.com/mapfiles/ms/icons/orange-dot.png" }
-                            });
-
-                            idleStartTime = null;
-                            idleEndTime = null;
-                        }
-                    } else {
-                        idleStartTime = null;
-                        idleEndTime = null;
-                    }
+                            document.getElementById("historicalPlaybackCombinedTable").innerHTML += combinedRow;
 
                     playbackIndex++;
                 }, speed);
@@ -1148,32 +1138,41 @@
             }
 
             function fetchDashboardData() {
-                fetch("/api/received-plates")
-                    .then(response => response.json())
-                    .then(data => {
-                        const dashboardTable = document.getElementById("dashboardTable");
-                        dashboardTable.innerHTML = "";
+    const selectedDate = document.getElementById("dateFilter").value;
+    const dashboardTable = document.getElementById("dashboardTable");
+    dashboardTable.innerHTML = "";
 
-                        data.forEach(plate => {
-                            const plateNumber = plate.plate || "-";
-                            const status = plate.status || "-";
-                            const time = plate.time || "-";
-                            const summons = plate.summons || [];
+    if (!selectedDate) return; // 🛑 Do nothing if date not selected
 
-                            const notice = summons.length > 0 ? summons[0].noticeNo : "-";
-                            const offence = summons.length > 0 ? summons[0].offence : "-";
-                            const amount = summons.length > 0 ? summons[0].amount : "-";
+    fetch("/api/received-plates")
+        .then(response => response.json())
+        .then(data => {
+            const filteredData = data.filter(plate => {
+                if (!plate.time) return false;
+                const plateDate = plate.time.split(" ")[0];
+                return plateDate === selectedDate;
+            });
 
-                            let colorClass = "";
-                            if (summons.length > 0) {
-                                colorClass = "color-scofflaw"; // Blue
-                            } else if (status.toLowerCase().includes("not paid")) {
-                                colorClass = "color-not-paid"; // Red
-                            } else if (status.toLowerCase().includes("paid")) {
-                                colorClass = "color-paid"; // Green
-                            }
+            filteredData.forEach(plate => {
+                const plateNumber = plate.plate || "-";
+                const status = plate.status || "-";
+                const time = plate.time || "-";
+                const summons = plate.summons || [];
 
-                            const row = `
+                const notice = summons.length > 0 ? summons[0].noticeNo : "-";
+                const offence = summons.length > 0 ? summons[0].offence : "-";
+                const amount = summons.length > 0 ? summons[0].amount : "-";
+
+                let colorClass = "";
+                if (summons.length > 0) {
+                    colorClass = "color-scofflaw";
+                } else if (status.toLowerCase().includes("not paid")) {
+                    colorClass = "color-not-paid";
+                } else if (status.toLowerCase().includes("paid")) {
+                    colorClass = "color-paid";
+                }
+
+                const row = `
                     <tr>
                         <td><strong class="${colorClass}">${plateNumber}</strong></td>
                         <td class="${colorClass}">${status}</td>
@@ -1182,17 +1181,18 @@
                         <td>${offence}</td>
                         <td>${amount}</td>
                     </tr>`;
-                            dashboardTable.innerHTML += row;
-                        });
-                    })
-                    .catch(error => console.error("❌ Error fetching received plates:", error));
-            }
-
+                dashboardTable.innerHTML += row;
+            });
+        })
+        .catch(error => console.error("❌ Error fetching received plates:", error));
+}
 
             setInterval(fetchDashboardData, 5000);
-            window.onload = fetchDashboardData;
-
-
+            window.onload = function () {
+    initTrackingMap();
+    setInterval(updateTracking, 5000);
+    showTrackingTab("live");
+};
 
         </script>
 
