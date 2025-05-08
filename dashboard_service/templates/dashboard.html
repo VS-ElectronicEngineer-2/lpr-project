@@ -404,18 +404,21 @@
             <h2>Dashboard</h2>
             <div class="dashboard-card">
                 <h3>Detected Plates & Summons Queue</h3>
-                <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <div
+                    style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: space-between; align-items: center; margin-bottom: 15px;">
                     <div style="display: flex; gap: 10px;">
-                        <input type="date" id="dateFilter" onchange="fetchDashboardData(); filterDashboardTable()" class="modern-btn" style="width: 160px;">
-                        <input type="text" id="dashboardSearch" placeholder="Search Plate..." onkeyup="filterDashboardTable()"
-                            class="modern-btn" style="width: 200px;">
+                        <input type="date" id="dateFilter" onchange="fetchDashboardData(); filterDashboardTable()"
+                            class="modern-btn" style="width: 160px;">
+                        <input type="text" id="dashboardSearch" placeholder="Search Plate..."
+                            onkeyup="filterDashboardTable()" class="modern-btn" style="width: 200px;">
                     </div>
                     <div style="display: flex; gap: 10px;">
-                        <button class="modern-btn export-btn" onclick="exportDashboardToExcel()">📄 Export to Excel</button>
+                        <button class="modern-btn export-btn" onclick="exportDashboardToExcel()">📄 Export to
+                            Excel</button>
                         <button class="modern-btn export-btn" onclick="exportDashboardToPDF()">🖨 Export to PDF</button>
                     </div>
                 </div>
-                
+
                 <table>
                     <thead>
                         <tr>
@@ -490,235 +493,235 @@
                     <button class="modern-btn stop-btn" onclick="stopPlayback()">⏹ Stop</button>
                 </div>
 
-<div class="tracking-table-container scrollable-table">
-    <table>
-        <thead>
-            <tr>
-                <th>Time</th>
-                <th>Address (Latitude, Longitude)</th>
-                <th>Speed (km/h)</th>
-                <th>Parking Duration</th>
-            </tr>
-        </thead>
-        <tbody id="historicalPlaybackCombinedTable"></tbody>
-    </table>
-</div>
+                <div class="tracking-table-container scrollable-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Address (Latitude, Longitude)</th>
+                                <th>Speed (km/h)</th>
+                                <th>Parking Duration</th>
+                            </tr>
+                        </thead>
+                        <tbody id="historicalPlaybackCombinedTable"></tbody>
+                    </table>
+                </div>
 
-        <!-- 🔹 JavaScript -->
-        <script>
-            function showSection(sectionId) {
-                document.querySelectorAll('.section').forEach(section => {
-                    section.classList.toggle('active', section.id === sectionId);
-                });
+                <!-- 🔹 JavaScript -->
+                <script>
+                    function showSection(sectionId) {
+                        document.querySelectorAll('.section').forEach(section => {
+                            section.classList.toggle('active', section.id === sectionId);
+                        });
 
-                if (sectionId === 'dashboard') {
-                    fetchDashboardData();
-                }
-
-                if (sectionId === 'dispatch-map') {
-                    setTimeout(() => {
-                        if (dispatchMap) {
-                            google.maps.event.trigger(dispatchMap, "resize");
-                            fetchPlatesAndSummons(); // ✅ Refresh markers on dispatch map
-                        } else {
-                            initDispatchMap(); // ✅ Initialize if not already initialized
+                        if (sectionId === 'dashboard') {
+                            fetchDashboardData();
                         }
-                    }, 300);
-                }
 
-                if (sectionId === 'tracking') {
-                    setTimeout(() => {
-                        initTrackingMap();  // ✅ Correct function name
-                        updateTracking();   // ✅ Call once immediately
-                        setInterval(updateTracking, 5000); // ✅ Repeat fetch every 5 sec
-                    }, 300);
-                }
-            }
+                        if (sectionId === 'dispatch-map') {
+                            setTimeout(() => {
+                                if (dispatchMap) {
+                                    google.maps.event.trigger(dispatchMap, "resize");
+                                    fetchPlatesAndSummons(); // ✅ Refresh markers on dispatch map
+                                } else {
+                                    initDispatchMap(); // ✅ Initialize if not already initialized
+                                }
+                            }, 300);
+                        }
 
-            // ✅ Refresh Dispatch Map Data Every 5 Seconds
-            setInterval(fetchPlatesAndSummons, 5000);
-
-            let dispatchMap;
-            let dispatchMarkers = [];
-
-            function initDispatchMap() {
-                let dispatchMapDiv = document.getElementById("map");
-
-                if (!dispatchMapDiv) {
-                    console.error("🚨 Dispatch Map div not found!");
-                    return;
-                }
-
-                dispatchMap = new google.maps.Map(dispatchMapDiv, {
-                    center: { lat: 3.1390, lng: 101.6869 }, // Default Kuala Lumpur
-                    zoom: 13,
-                    mapTypeId: "roadmap"
-                });
-
-
-                console.log("✅ Dispatch Map Initialized");
-
-                fetchPlatesAndSummons(); // ✅ Fetch detected plates & summons
-            }
-
-
-            // ✅ Initialize Tracking Map
-            function initTrackingMap() {
-                let trackingMapDiv = document.getElementById("trackingMap");
-
-                if (!trackingMapDiv) {
-                    console.error("🚨 Tracking Map div not found!");
-                    return;
-                }
-
-                trackingMap = new google.maps.Map(trackingMapDiv, {
-                    center: { lat: 3.139, lng: 101.6869 }, // Default Kuala Lumpur
-                    zoom: 13,
-                    mapTypeId: "roadmap"
-                });
-            }
-
-
-            // 🔹 STEP 3: Ensure the Map Updates When Displayed
-            function updateMap() {
-                setTimeout(() => {
-                    if (map) {
-                        map.invalidateSize(); // 🔹 Fixes the map alignment issue
+                        if (sectionId === 'tracking') {
+                            setTimeout(() => {
+                                initTrackingMap();  // ✅ Correct function name
+                                updateTracking();   // ✅ Call once immediately
+                                setInterval(updateTracking, 5000); // ✅ Repeat fetch every 5 sec
+                            }, 300);
+                        }
                     }
-                }, 500); // 🔹 Short delay to ensure it loads before resizing
-            }
 
-            let plateMarkers = {}; // Store markers to avoid duplicatio
+                    // ✅ Refresh Dispatch Map Data Every 5 Seconds
+                    setInterval(fetchPlatesAndSummons, 5000);
 
-            function toggleDropdown() {
-                var menu = document.getElementById("dropdown-menu");
-                menu.style.display = (menu.style.display === "block") ? "none" : "block";
-            }
+                    let dispatchMap;
+                    let dispatchMarkers = [];
 
-            // Close dropdown when clicking outside
-            window.onclick = function (event) {
-                if (!event.target.closest('.profile-container')) {
-                    document.getElementById("dropdown-menu").style.display = "none";
-                }
-            }
+                    function initDispatchMap() {
+                        let dispatchMapDiv = document.getElementById("map");
 
-            function filterDashboardTable() {
-    const inputPlate = document.getElementById("dashboardSearch").value.toUpperCase();
-    const inputDate = document.getElementById("dateFilter").value;
-    const rows = document.querySelectorAll("#dashboardTable tr");
+                        if (!dispatchMapDiv) {
+                            console.error("🚨 Dispatch Map div not found!");
+                            return;
+                        }
 
-    rows.forEach(row => {
-        const plateCell = row.querySelector("td:nth-child(1)");
-        const timeCell = row.querySelector("td:nth-child(3)");
+                        dispatchMap = new google.maps.Map(dispatchMapDiv, {
+                            center: { lat: 3.1390, lng: 101.6869 }, // Default Kuala Lumpur
+                            zoom: 13,
+                            mapTypeId: "roadmap"
+                        });
 
-        if (!plateCell || !timeCell) return;
 
-        const plateText = plateCell.textContent.toUpperCase();
-        const dateOnly = timeCell.textContent.trim().split(" ")[0]; // Get date part
+                        console.log("✅ Dispatch Map Initialized");
 
-        const matchPlate = !inputPlate || plateText.includes(inputPlate);
-        const matchDate = !inputDate || dateOnly === inputDate;
-
-        row.style.display = (matchPlate && matchDate) ? "" : "none";
-    });
-}
-
-            function exportDashboardToExcel() {
-                const rows = document.querySelectorAll("#dashboardTable tr");
-                let csv = "License Plate,Status,Time,Notice No,Offence,Amount\n";
-
-                rows.forEach(row => {
-                    const cells = row.querySelectorAll("td");
-                    if (cells.length > 0) {
-                        csv += Array.from(cells).map(cell => cell.innerText).join(",") + "\n";
+                        fetchPlatesAndSummons(); // ✅ Fetch detected plates & summons
                     }
-                });
 
-                const blob = new Blob([csv], { type: "text/csv" });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                a.href = url;
-                a.download = "dashboard_data.csv";
-                a.click();
-                window.URL.revokeObjectURL(url);
-            }
 
-            function exportDashboardToPDF() {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
+                    // ✅ Initialize Tracking Map
+                    function initTrackingMap() {
+                        let trackingMapDiv = document.getElementById("trackingMap");
 
-                doc.setFontSize(14);
-                doc.text("Detected Plates & Summons Queue", 14, 20);
+                        if (!trackingMapDiv) {
+                            console.error("🚨 Tracking Map div not found!");
+                            return;
+                        }
 
-                const headers = [["License Plate", "Status", "Time", "Notice No", "Offence", "Amount"]];
-                const rows = [];
+                        trackingMap = new google.maps.Map(trackingMapDiv, {
+                            center: { lat: 3.139, lng: 101.6869 }, // Default Kuala Lumpur
+                            zoom: 13,
+                            mapTypeId: "roadmap"
+                        });
+                    }
 
-                document.querySelectorAll("#dashboardTable tr").forEach(row => {
-                    const cols = Array.from(row.querySelectorAll("td")).map(cell => cell.innerText);
-                    if (cols.length) rows.push(cols);
-                });
 
-                doc.autoTable({
-                    head: headers,
-                    body: rows,
-                    startY: 30,
-                    theme: "grid"
-                });
-
-                doc.save("dashboard_data.pdf");
-            }
-
-            function fetchPlatesAndSummons() {
-                fetch("/api/received-plates")  // ✅ Updated to new endpoint
-                    .then(response => response.json())
-                    .then(detectedPlates => {
-                        // ✅ Clear existing markers
-                        dispatchMarkers.forEach(marker => marker.setMap(null));
-                        dispatchMarkers = [];
-
-                        let firstValidPosition = null;
-
-                        detectedPlates.forEach((plate) => {
-                            if (!plate.latitude || !plate.longitude) return;
-
-                            let position = { lat: plate.latitude, lng: plate.longitude };
-                            let plateNumber = plate.plate.trim().toUpperCase();
-                            let plateStatus = plate.status.toLowerCase().trim();
-
-                            if (!firstValidPosition) {
-                                firstValidPosition = position;
+                    // 🔹 STEP 3: Ensure the Map Updates When Displayed
+                    function updateMap() {
+                        setTimeout(() => {
+                            if (map) {
+                                map.invalidateSize(); // 🔹 Fixes the map alignment issue
                             }
+                        }, 500); // 🔹 Short delay to ensure it loads before resizing
+                    }
 
-                            // 🎨 Marker color and status
-                            let infoColor = "";
-                            let statusText = "";
-                            let iconUrl = "";
+                    let plateMarkers = {}; // Store markers to avoid duplicatio
 
-                            if (plateStatus.includes("scofflaw")) {
-                                infoColor = "blue";
-                                statusText = "Scofflaw Alert";
-                                iconUrl = "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
-                            } else if (plateStatus.includes("not paid")) {
-                                infoColor = "red";
-                                statusText = "Parking Rights Alert";
-                                iconUrl = "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
-                            } else if (plateStatus.includes("paid")) {
-                                infoColor = "green";
-                                statusText = "Read";
-                                iconUrl = "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
-                            } else {
-                                infoColor = "gray";
-                                statusText = "Unknown";
-                                iconUrl = "http://maps.google.com/mapfiles/ms/icons/gray-dot.png";
+                    function toggleDropdown() {
+                        var menu = document.getElementById("dropdown-menu");
+                        menu.style.display = (menu.style.display === "block") ? "none" : "block";
+                    }
+
+                    // Close dropdown when clicking outside
+                    window.onclick = function (event) {
+                        if (!event.target.closest('.profile-container')) {
+                            document.getElementById("dropdown-menu").style.display = "none";
+                        }
+                    }
+
+                    function filterDashboardTable() {
+                        const inputPlate = document.getElementById("dashboardSearch").value.toUpperCase();
+                        const inputDate = document.getElementById("dateFilter").value;
+                        const rows = document.querySelectorAll("#dashboardTable tr");
+
+                        rows.forEach(row => {
+                            const plateCell = row.querySelector("td:nth-child(1)");
+                            const timeCell = row.querySelector("td:nth-child(3)");
+
+                            if (!plateCell || !timeCell) return;
+
+                            const plateText = plateCell.textContent.toUpperCase();
+                            const dateOnly = timeCell.textContent.trim().split(" ")[0]; // Get date part
+
+                            const matchPlate = !inputPlate || plateText.includes(inputPlate);
+                            const matchDate = !inputDate || dateOnly === inputDate;
+
+                            row.style.display = (matchPlate && matchDate) ? "" : "none";
+                        });
+                    }
+
+                    function exportDashboardToExcel() {
+                        const rows = document.querySelectorAll("#dashboardTable tr");
+                        let csv = "License Plate,Status,Time,Notice No,Offence,Amount\n";
+
+                        rows.forEach(row => {
+                            const cells = row.querySelectorAll("td");
+                            if (cells.length > 0) {
+                                csv += Array.from(cells).map(cell => cell.innerText).join(",") + "\n";
                             }
+                        });
+
+                        const blob = new Blob([csv], { type: "text/csv" });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = "dashboard_data.csv";
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                    }
+
+                    function exportDashboardToPDF() {
+                        const { jsPDF } = window.jspdf;
+                        const doc = new jsPDF();
+
+                        doc.setFontSize(14);
+                        doc.text("Detected Plates & Summons Queue", 14, 20);
+
+                        const headers = [["License Plate", "Status", "Time", "Notice No", "Offence", "Amount"]];
+                        const rows = [];
+
+                        document.querySelectorAll("#dashboardTable tr").forEach(row => {
+                            const cols = Array.from(row.querySelectorAll("td")).map(cell => cell.innerText);
+                            if (cols.length) rows.push(cols);
+                        });
+
+                        doc.autoTable({
+                            head: headers,
+                            body: rows,
+                            startY: 30,
+                            theme: "grid"
+                        });
+
+                        doc.save("dashboard_data.pdf");
+                    }
+
+                    function fetchPlatesAndSummons() {
+                        fetch("/api/received-plates")  // ✅ Updated to new endpoint
+                            .then(response => response.json())
+                            .then(detectedPlates => {
+                                // ✅ Clear existing markers
+                                dispatchMarkers.forEach(marker => marker.setMap(null));
+                                dispatchMarkers = [];
+
+                                let firstValidPosition = null;
+
+                                detectedPlates.forEach((plate) => {
+                                    if (!plate.latitude || !plate.longitude) return;
+
+                                    let position = { lat: plate.latitude, lng: plate.longitude };
+                                    let plateNumber = plate.plate.trim().toUpperCase();
+                                    let plateStatus = plate.status.toLowerCase().trim();
+
+                                    if (!firstValidPosition) {
+                                        firstValidPosition = position;
+                                    }
+
+                                    // 🎨 Marker color and status
+                                    let infoColor = "";
+                                    let statusText = "";
+                                    let iconUrl = "";
+
+                                    if (plateStatus.includes("scofflaw")) {
+                                        infoColor = "blue";
+                                        statusText = "Scofflaw Alert";
+                                        iconUrl = "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+                                    } else if (plateStatus.includes("not paid")) {
+                                        infoColor = "red";
+                                        statusText = "Parking Rights Alert";
+                                        iconUrl = "http://maps.google.com/mapfiles/ms/icons/red-dot.png";
+                                    } else if (plateStatus.includes("paid")) {
+                                        infoColor = "green";
+                                        statusText = "Read";
+                                        iconUrl = "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
+                                    } else {
+                                        infoColor = "gray";
+                                        statusText = "Unknown";
+                                        iconUrl = "http://maps.google.com/mapfiles/ms/icons/gray-dot.png";
+                                    }
 
 
-                            // ✅ Handle image URL fallback
-                            let imageUrl = plate.snapshot.startsWith("http")
-                                ? plate.snapshot
-                                : `/${plate.snapshot}`;
+                                    // ✅ Handle image URL fallback
+                                    let imageUrl = plate.snapshot.startsWith("http")
+                                        ? plate.snapshot
+                                        : `/${plate.snapshot}`;
 
-                            let infoWindowContent = `
+                                    let infoWindowContent = `
                 <div style="border: 3px solid ${infoColor}; border-radius: 8px; background: #fff; padding: 10px; text-align: center; width: 250px;">
                     <div style="background: ${infoColor}; color: white; font-weight: bold; padding: 5px; border-radius: 6px;">
                         ${statusText}
@@ -733,315 +736,315 @@
                          style="width: 100%; height: auto; margin-top: 5px; border-radius: 5px; border: 2px solid ${infoColor};">
                 </div>`;
 
-                            let marker = new google.maps.Marker({
-                                position,
-                                map: dispatchMap,
-                                title: `Plate: ${plateNumber}`,
-                                icon: { url: iconUrl }
-                            });
+                                    let marker = new google.maps.Marker({
+                                        position,
+                                        map: dispatchMap,
+                                        title: `Plate: ${plateNumber}`,
+                                        icon: { url: iconUrl }
+                                    });
 
-                            let infoWindow = new google.maps.InfoWindow({
-                                content: infoWindowContent
-                            });
+                                    let infoWindow = new google.maps.InfoWindow({
+                                        content: infoWindowContent
+                                    });
 
-                            marker.addListener("click", () => infoWindow.open(dispatchMap, marker));
-                            dispatchMarkers.push(marker);
+                                    marker.addListener("click", () => infoWindow.open(dispatchMap, marker));
+                                    dispatchMarkers.push(marker);
 
-                            console.log(`📍 Marker added for ${plateNumber} at (${position.lat}, ${position.lng})`);
-                        });
+                                    console.log(`📍 Marker added for ${plateNumber} at (${position.lat}, ${position.lng})`);
+                                });
 
-                        // ✅ Recenter map on the first valid marker
-                        if (firstValidPosition) {
-                            dispatchMap.setCenter(firstValidPosition);
-                            dispatchMap.setZoom(17);
-                            console.log("📌 Map centered at first detected plate position.");
-                        } else {
-                            console.warn("⚠️ No valid markers found to center the map.");
-                        }
-                    })
-                    .catch(error => console.error("❌ Error fetching plates:", error));
-            }
-
-
-            let trackingMap;
-            let historicalTrackingMap;
-            let trackingPath = [];
-            let vehicleMarker = null;
-
-            function initTrackingMap() {
-                trackingMap = new google.maps.Map(document.getElementById("liveTrackingMap"), {
-                    center: { lat: 3.139, lng: 101.6869 },
-                    zoom: 13,
-                    mapTypeId: "roadmap"
-                });
-
-                historicalTrackingMap = new google.maps.Map(document.getElementById("historicalTrackingMap"), {
-                    center: { lat: 3.139, lng: 101.6869 },
-                    zoom: 13,
-                    mapTypeId: "roadmap"
-                });
-            }
-
-
-            function updateTracking() {
-                fetch("/gps-tracking")
-                    .then(response => response.json())
-                    .then(data => {
-                        if (!data.latitude || !data.longitude || !trackingMap) {
-                            console.warn("⚠️ Invalid GPS data or trackingMap not ready.");
-                            return;
-                        }
-
-                        const { latitude, longitude, speed, start_time } = data;
-                        const position = { lat: latitude, lng: longitude };
-
-                        console.log("📡 New GPS:", data);
-
-                        // Update tracking path
-                        trackingPath.push(position);
-
-                        // Update or create marker
-                        if (!vehicleMarker) {
-                            vehicleMarker = new google.maps.Marker({
-                                position,
-                                map: trackingMap,
-                                title: "Vehicle Location",
-                                icon: {
-                                    url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+                                // ✅ Recenter map on the first valid marker
+                                if (firstValidPosition) {
+                                    dispatchMap.setCenter(firstValidPosition);
+                                    dispatchMap.setZoom(17);
+                                    console.log("📌 Map centered at first detected plate position.");
+                                } else {
+                                    console.warn("⚠️ No valid markers found to center the map.");
                                 }
-                            });
-                        } else {
-                            vehicleMarker.setPosition(position);
-                        }
+                            })
+                            .catch(error => console.error("❌ Error fetching plates:", error));
+                    }
 
-                        // Draw polyline path
-                        const trackingPolyline = new google.maps.Polyline({
-                            path: trackingPath,
-                            geodesic: true,
-                            strokeColor: "#0000FF",
-                            strokeOpacity: 1.0,
-                            strokeWeight: 3
+
+                    let trackingMap;
+                    let historicalTrackingMap;
+                    let trackingPath = [];
+                    let vehicleMarker = null;
+
+                    function initTrackingMap() {
+                        trackingMap = new google.maps.Map(document.getElementById("liveTrackingMap"), {
+                            center: { lat: 3.139, lng: 101.6869 },
+                            zoom: 13,
+                            mapTypeId: "roadmap"
                         });
-                        trackingPolyline.setMap(trackingMap);
 
-                        // Show in table with status
-                        const statusText = speed < 5 ? "🟡 Idle" : "🟢 Moving";
+                        historicalTrackingMap = new google.maps.Map(document.getElementById("historicalTrackingMap"), {
+                            center: { lat: 3.139, lng: 101.6869 },
+                            zoom: 13,
+                            mapTypeId: "roadmap"
+                        });
+                    }
 
-                        const row = `<tr>
+
+                    function updateTracking() {
+                        fetch("/gps-tracking")
+                            .then(response => response.json())
+                            .then(data => {
+                                if (!data.latitude || !data.longitude || !trackingMap) {
+                                    console.warn("⚠️ Invalid GPS data or trackingMap not ready.");
+                                    return;
+                                }
+
+                                const { latitude, longitude, speed, start_time } = data;
+                                const position = { lat: latitude, lng: longitude };
+
+                                console.log("📡 New GPS:", data);
+
+                                // Update tracking path
+                                trackingPath.push(position);
+
+                                // Update or create marker
+                                if (!vehicleMarker) {
+                                    vehicleMarker = new google.maps.Marker({
+                                        position,
+                                        map: trackingMap,
+                                        title: "Vehicle Location",
+                                        icon: {
+                                            url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
+                                        }
+                                    });
+                                } else {
+                                    vehicleMarker.setPosition(position);
+                                }
+
+                                // Draw polyline path
+                                const trackingPolyline = new google.maps.Polyline({
+                                    path: trackingPath,
+                                    geodesic: true,
+                                    strokeColor: "#0000FF",
+                                    strokeOpacity: 1.0,
+                                    strokeWeight: 3
+                                });
+                                trackingPolyline.setMap(trackingMap);
+
+                                // Show in table with status
+                                const statusText = speed < 5 ? "🟡 Idle" : "🟢 Moving";
+
+                                const row = `<tr>
                 <td>${start_time}</td>
                 <td>${latitude.toFixed(6)}</td>
                 <td>${longitude.toFixed(6)}</td>
                 <td>${speed} km/h - ${statusText}</td>
             </tr>`;
 
-                        document.getElementById("liveTrackingTable").innerHTML += row;
-                    })
-                    .catch(err => console.error("❌ Error fetching GPS:", err));
-            }
+                                document.getElementById("liveTrackingTable").innerHTML += row;
+                            })
+                            .catch(err => console.error("❌ Error fetching GPS:", err));
+                    }
 
-            function resetTrackingPath() {
-                trackingPath = [];
-                if (vehicleMarker) vehicleMarker.setMap(null);
-                vehicleMarker = null;
-                document.getElementById("liveTrackingTable").innerHTML = "";
-                initTrackingMap();
-            }
+                    function resetTrackingPath() {
+                        trackingPath = [];
+                        if (vehicleMarker) vehicleMarker.setMap(null);
+                        vehicleMarker = null;
+                        document.getElementById("liveTrackingTable").innerHTML = "";
+                        initTrackingMap();
+                    }
 
 
 
-            function searchTrackingData() {
-                let plateNumber = document.getElementById("plateSearch").value.trim();
-                if (!plateNumber) {
-                    alert("Please enter a plate number.");
-                    return;
-                }
-
-                let start = document.getElementById("startDate").value;
-                let end = document.getElementById("endDate").value;
-
-                fetch(`/gps-tracking-history?plate=${plateNumber}&start=${start}&end=${end}`)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.length === 0) {
-                            alert("No tracking data found for this plate number.");
+                    function searchTrackingData() {
+                        let plateNumber = document.getElementById("plateSearch").value.trim();
+                        if (!plateNumber) {
+                            alert("Please enter a plate number.");
                             return;
                         }
 
-                        // ✅ Store data only for playback
-                        playbackData = data.map(entry => ({
-                            lat: entry.latitude,
-                            lng: entry.longitude,
-                            speed: entry.speed,
-                            time: entry.time
-                        }));
+                        let start = document.getElementById("startDate").value;
+                        let end = document.getElementById("endDate").value;
 
-                        // ❌ DO NOT RENDER MAP OR TABLE YET
-                        document.getElementById("historicalTrackingTable").innerHTML = ""; // Optional: clear previous
-                        document.getElementById("idleTableBody").innerHTML = ""; // Clear idle table too
+                        fetch(`/gps-tracking-history?plate=${plateNumber}&start=${start}&end=${end}`)
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.length === 0) {
+                                    alert("No tracking data found for this plate number.");
+                                    return;
+                                }
 
-                        alert("Data loaded! Click ▶️ Play to start playback.");
-                    })
-                    .catch(error => console.error("Error fetching tracking data:", error));
-            }
+                                // ✅ Store data only for playback
+                                playbackData = data.map(entry => ({
+                                    lat: entry.latitude,
+                                    lng: entry.longitude,
+                                    speed: entry.speed,
+                                    time: entry.time
+                                }));
 
-            // ✅ Update clearTrackingSearch() for Google Maps:
-            function clearTrackingSearch() {
-                document.getElementById("plateSearch").value = "";
-                document.getElementById("startDate").value = "";
-                document.getElementById("endDate").value = "";
-                document.getElementById("historicalTrackingTable").innerHTML = "";
+                                // ❌ DO NOT RENDER MAP OR TABLE YET
+                                document.getElementById("historicalTrackingTable").innerHTML = ""; // Optional: clear previous
+                                document.getElementById("idleTableBody").innerHTML = ""; // Clear idle table too
 
-                // Reset the historical map
-                historicalTrackingMap = new google.maps.Map(document.getElementById("historicalTrackingMap"), {
-                    center: { lat: 3.139, lng: 101.6869 },
-                    zoom: 13,
-                    mapTypeId: "roadmap"
-                });
-            }
-
-            function showTrackingTab(type) {
-                const liveTab = document.getElementById("liveTrackingTab");
-                const historyTab = document.getElementById("historicalTrackingTab");
-
-                if (type === 'live') {
-                    liveTab.style.display = 'block';
-                    historyTab.style.display = 'none';
-                } else {
-                    liveTab.style.display = 'none';
-                    historyTab.style.display = 'block';
-                }
-            }
-
-            window.onload = function () {
-                fetchDashboardData();  // ✅ Keep this line
-                initTrackingMap();
-                setInterval(updateTracking, 5000);
-                showTrackingTab("live"); // Default tab
-            };
-
-
-            let plateNumber = new URLSearchParams(window.location.search).get("plate");
-
-            document.addEventListener("DOMContentLoaded", function () {
-                const urlParams = new URLSearchParams(window.location.search);
-                const plateNumber = urlParams.get("plate");
-                const view = urlParams.get("view");
-
-                if (plateNumber) {
-                    document.getElementById("plateNumber").innerText = plateNumber;
-                    fetchSummonsData(plateNumber);
-
-                    if (view === "summons-payment") {
-                        showSection("summons-payment");
-
-                        // ✅ Hide Sidebar + Topbar for clean QR view
-                        document.querySelector(".sidebar").style.display = "none";
-                        document.querySelector(".topbar").style.display = "none";
-                        document.getElementById("mainBody").style.background = "#ffffff"; // Optional white background
-                        document.getElementById("summons-payment").classList.add("fullscreen");
+                                alert("Data loaded! Click ▶️ Play to start playback.");
+                            })
+                            .catch(error => console.error("Error fetching tracking data:", error));
                     }
-                }
-            });
 
-            let playbackData = [];
-            let playbackIndex = 0;
-            let playbackInterval = null;
-            let playbackMarker = null;
-            let playbackPolyline = null;
-            let playbackPath = null;
-            let isPaused = false;
+                    // ✅ Update clearTrackingSearch() for Google Maps:
+                    function clearTrackingSearch() {
+                        document.getElementById("plateSearch").value = "";
+                        document.getElementById("startDate").value = "";
+                        document.getElementById("endDate").value = "";
+                        document.getElementById("historicalTrackingTable").innerHTML = "";
 
-            function exportPlaybackToExcel() {
-                if (!playbackData.length) {
-                    alert("No data to export.");
-                    return;
-                }
-
-                let csv = "Time,Latitude,Longitude,Speed (km/h)\n";
-                playbackData.forEach(entry => {
-                    csv += `${entry.time},${entry.lat},${entry.lng},${entry.speed}\n`;
-                });
-
-                const blob = new Blob([csv], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'historical_tracking.csv';
-                a.click();
-                window.URL.revokeObjectURL(url);
-            }
-
-            let idleStartTime = null;
-            let idleEntries = [];
-
-            function startPlayback(speed = 1000) {
-                console.log("▶️ Starting Playback with data:", playbackData);
-
-                if (!playbackData || !playbackData.length) {
-                    alert("❌ No data available. Please search first.");
-                    return;
-                }
-
-                if (playbackInterval) clearInterval(playbackInterval);
-                if (playbackMarker) playbackMarker.setMap(null);
-                if (playbackPath) playbackPath.setMap(null);
-
-                playbackIndex = 0;
-                isPaused = false;
-
-                // Create the playback marker
-                playbackMarker = new google.maps.Marker({
-                    position: { lat: playbackData[0].lat, lng: playbackData[0].lng },
-                    map: historicalTrackingMap,
-                    title: "Vehicle Playback",
-                    icon: {
-                        url: "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
+                        // Reset the historical map
+                        historicalTrackingMap = new google.maps.Map(document.getElementById("historicalTrackingMap"), {
+                            center: { lat: 3.139, lng: 101.6869 },
+                            zoom: 13,
+                            mapTypeId: "roadmap"
+                        });
                     }
-                });
 
-                playbackPath = new google.maps.Polyline({
-                    path: [],
-                    geodesic: true,
-                    strokeColor: "#FFA500",
-                    strokeOpacity: 1.0,
-                    strokeWeight: 4,
-                    map: historicalTrackingMap
-                });
+                    function showTrackingTab(type) {
+                        const liveTab = document.getElementById("liveTrackingTab");
+                        const historyTab = document.getElementById("historicalTrackingTab");
 
-                let idleStartTime = null;
-                let idleEndTime = null;
-                let idleEntries = [];
+                        if (type === 'live') {
+                            liveTab.style.display = 'block';
+                            historyTab.style.display = 'none';
+                        } else {
+                            liveTab.style.display = 'none';
+                            historyTab.style.display = 'block';
+                        }
+                    }
 
-                playbackInterval = setInterval(() => {
-                    if (isPaused || playbackIndex >= playbackData.length) {
-                        clearInterval(playbackInterval);
+                    window.onload = function () {
+                        fetchDashboardData();  // ✅ Keep this line
+                        initTrackingMap();
+                        setInterval(updateTracking, 5000);
+                        showTrackingTab("live"); // Default tab
+                    };
 
-                        // ✅ Display Detected Idle Periods
-                        const idleTable = document.getElementById("idleTableBody");
-                        idleTable.innerHTML = "";
 
-                        idleEntries.forEach(idle => {
-                            const row = `
+                    let plateNumber = new URLSearchParams(window.location.search).get("plate");
+
+                    document.addEventListener("DOMContentLoaded", function () {
+                        const urlParams = new URLSearchParams(window.location.search);
+                        const plateNumber = urlParams.get("plate");
+                        const view = urlParams.get("view");
+
+                        if (plateNumber) {
+                            document.getElementById("plateNumber").innerText = plateNumber;
+                            fetchSummonsData(plateNumber);
+
+                            if (view === "summons-payment") {
+                                showSection("summons-payment");
+
+                                // ✅ Hide Sidebar + Topbar for clean QR view
+                                document.querySelector(".sidebar").style.display = "none";
+                                document.querySelector(".topbar").style.display = "none";
+                                document.getElementById("mainBody").style.background = "#ffffff"; // Optional white background
+                                document.getElementById("summons-payment").classList.add("fullscreen");
+                            }
+                        }
+                    });
+
+                    let playbackData = [];
+                    let playbackIndex = 0;
+                    let playbackInterval = null;
+                    let playbackMarker = null;
+                    let playbackPolyline = null;
+                    let playbackPath = null;
+                    let isPaused = false;
+
+                    function exportPlaybackToExcel() {
+                        if (!playbackData.length) {
+                            alert("No data to export.");
+                            return;
+                        }
+
+                        let csv = "Time,Latitude,Longitude,Speed (km/h)\n";
+                        playbackData.forEach(entry => {
+                            csv += `${entry.time},${entry.lat},${entry.lng},${entry.speed}\n`;
+                        });
+
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'historical_tracking.csv';
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                    }
+
+                    let idleStartTime = null;
+                    let idleEntries = [];
+
+                    function startPlayback(speed = 1000) {
+                        console.log("▶️ Starting Playback with data:", playbackData);
+
+                        if (!playbackData || !playbackData.length) {
+                            alert("❌ No data available. Please search first.");
+                            return;
+                        }
+
+                        if (playbackInterval) clearInterval(playbackInterval);
+                        if (playbackMarker) playbackMarker.setMap(null);
+                        if (playbackPath) playbackPath.setMap(null);
+
+                        playbackIndex = 0;
+                        isPaused = false;
+
+                        // Create the playback marker
+                        playbackMarker = new google.maps.Marker({
+                            position: { lat: playbackData[0].lat, lng: playbackData[0].lng },
+                            map: historicalTrackingMap,
+                            title: "Vehicle Playback",
+                            icon: {
+                                url: "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
+                            }
+                        });
+
+                        playbackPath = new google.maps.Polyline({
+                            path: [],
+                            geodesic: true,
+                            strokeColor: "#FFA500",
+                            strokeOpacity: 1.0,
+                            strokeWeight: 4,
+                            map: historicalTrackingMap
+                        });
+
+                        let idleStartTime = null;
+                        let idleEndTime = null;
+                        let idleEntries = [];
+
+                        playbackInterval = setInterval(() => {
+                            if (isPaused || playbackIndex >= playbackData.length) {
+                                clearInterval(playbackInterval);
+
+                                // ✅ Display Detected Idle Periods
+                                const idleTable = document.getElementById("idleTableBody");
+                                idleTable.innerHTML = "";
+
+                                idleEntries.forEach(idle => {
+                                    const row = `
                     <tr>
                         <td>${idle.start}</td>
                         <td>${idle.end}</td>
                         <td>${idle.duration} sec</td>
                     </tr>`;
-                            idleTable.innerHTML += row;
-                        });
+                                    idleTable.innerHTML += row;
+                                });
 
-                        return;
-                    }
+                                return;
+                            }
 
-                    const current = playbackData[playbackIndex];
-                    const prev = playbackIndex > 0 ? playbackData[playbackIndex - 1] : null;
+                            const current = playbackData[playbackIndex];
+                            const prev = playbackIndex > 0 ? playbackData[playbackIndex - 1] : null;
 
-                    const position = { lat: current.lat, lng: current.lng };
-                    playbackMarker.setPosition(position);
-                    playbackPath.getPath().push(new google.maps.LatLng(position.lat, position.lng));
-                    historicalTrackingMap.panTo(position);
+                            const position = { lat: current.lat, lng: current.lng };
+                            playbackMarker.setPosition(position);
+                            playbackPath.getPath().push(new google.maps.LatLng(position.lat, position.lng));
+                            historicalTrackingMap.panTo(position);
 
-                    const address = `${current.lat.toFixed(5)}, ${current.lng.toFixed(5)}`;
+                            const address = `${current.lat.toFixed(5)}, ${current.lng.toFixed(5)}`;
                             let parkingDuration = "";
 
                             if (current.speed < 5 && prev) {
@@ -1086,93 +1089,93 @@
 
                             document.getElementById("historicalPlaybackCombinedTable").innerHTML += combinedRow;
 
-                    playbackIndex++;
-                }, speed);
-            }
+                            playbackIndex++;
+                        }, speed);
+                    }
 
-            function renderIdleTimeTable() {
-                const table = document.getElementById("idleTimeTable");
-                table.innerHTML = "";
+                    function renderIdleTimeTable() {
+                        const table = document.getElementById("idleTimeTable");
+                        table.innerHTML = "";
 
-                if (!idleEntries.length) {
-                    table.innerHTML = "<tr><td colspan='3'>No idle periods detected</td></tr>";
-                    return;
-                }
+                        if (!idleEntries.length) {
+                            table.innerHTML = "<tr><td colspan='3'>No idle periods detected</td></tr>";
+                            return;
+                        }
 
-                idleEntries.forEach(idle => {
-                    const row = `<tr>
+                        idleEntries.forEach(idle => {
+                            const row = `<tr>
             <td>${idle.start}</td>
             <td>${idle.end}</td>
             <td>${idle.duration}</td>
         </tr>`;
-                    table.innerHTML += row;
-                });
-            }
+                            table.innerHTML += row;
+                        });
+                    }
 
-            function pausePlayback() {
-                isPaused = true;
-                console.log("⏸ Playback paused");
-            }
+                    function pausePlayback() {
+                        isPaused = true;
+                        console.log("⏸ Playback paused");
+                    }
 
-            function stopPlayback() {
-                console.log("⏹ Stopping playback...");
-                isPaused = false;
-                playbackIndex = 0;
-                clearInterval(playbackInterval);
+                    function stopPlayback() {
+                        console.log("⏹ Stopping playback...");
+                        isPaused = false;
+                        playbackIndex = 0;
+                        clearInterval(playbackInterval);
 
-                if (playbackMarker) {
-                    playbackMarker.setMap(null);
-                    playbackMarker = null;
-                }
+                        if (playbackMarker) {
+                            playbackMarker.setMap(null);
+                            playbackMarker = null;
+                        }
 
-                if (playbackPath) {
-                    playbackPath.setMap(null);
-                    playbackPath = null;
-                }
+                        if (playbackPath) {
+                            playbackPath.setMap(null);
+                            playbackPath = null;
+                        }
 
-                playbackData = [];
-            }
+                        playbackData = [];
+                    }
 
-            function exportToPDF() {
-                alert("🚀 PDF Export functionality coming soon!");
-            }
+                    function exportToPDF() {
+                        alert("🚀 PDF Export functionality coming soon!");
+                    }
 
-            function fetchDashboardData() {
-    const selectedDate = document.getElementById("dateFilter").value;
-    const dashboardTable = document.getElementById("dashboardTable");
-    dashboardTable.innerHTML = "";
+                    function fetchDashboardData() {
+                        const selectedDate = document.getElementById("dateFilter").value;
+                        const dashboardTable = document.getElementById("dashboardTable");
+                        dashboardTable.innerHTML = "";
 
-    if (!selectedDate) return; // 🛑 Do nothing if date not selected
+                        if (!selectedDate) return; // 🛑 Do nothing if date not selected
 
-    fetch("/api/received-plates")
-        .then(response => response.json())
-        .then(data => {
-            const filteredData = data.filter(plate => {
-                if (!plate.time) return false;
-                const plateDate = plate.time.split(" ")[0];
-                return plateDate === selectedDate;
-            });
+                        fetch("/api/received-plates")
+                            .then(response => response.json())
+                            .then(data => {
+                                const filteredData = data.filter(plate => {
+                                    if (!plate.time) return false;
+                                    const plateDate = plate.time.split(" ")[0];
+                                    return plateDate === selectedDate;
+                                });
 
-            filteredData.forEach(plate => {
-                const plateNumber = plate.plate || "-";
-                const status = plate.status || "-";
-                const time = plate.time || "-";
-                const summons = plate.summons || [];
+                                filteredData.forEach(plate => {
+                                    const plateNumber = plate.plate || "-";
+                                    const status = plate.status || "-";
+                                    const time = plate.time || "-";
+                                    const summons = plate.summons || [];
 
-                const notice = summons.length > 0 ? summons[0].noticeNo : "-";
-                const offence = summons.length > 0 ? summons[0].offence : "-";
-                const amount = summons.length > 0 ? summons[0].amount : "-";
+                                    const notice = summons.length > 0 ? summons[0].noticeNo : "-";
+                                    const offence = summons.length > 0 ? summons[0].offence : "-";
+                                    const amount = summons.length > 0 ? summons[0].amount : "-";
 
-                let colorClass = "";
-                if (summons.length > 0) {
-                    colorClass = "color-scofflaw";
-                } else if (status.toLowerCase().includes("not paid")) {
-                    colorClass = "color-not-paid";
-                } else if (status.toLowerCase().includes("paid")) {
-                    colorClass = "color-paid";
-                }
+                                    let colorClass = "";
+                                    if (summons.length > 0) {
+                                        colorClass = "color-scofflaw";
+                                    } else if (status.toLowerCase().includes("not paid")) {
+                                        colorClass = "color-not-paid";
+                                    } else if (status.toLowerCase().includes("paid")) {
+                                        colorClass = "color-paid";
+                                    }
 
-                const row = `
+                                    const row = `
                     <tr>
                         <td><strong class="${colorClass}">${plateNumber}</strong></td>
                         <td class="${colorClass}">${status}</td>
@@ -1181,20 +1184,20 @@
                         <td>${offence}</td>
                         <td>${amount}</td>
                     </tr>`;
-                dashboardTable.innerHTML += row;
-            });
-        })
-        .catch(error => console.error("❌ Error fetching received plates:", error));
-}
+                                    dashboardTable.innerHTML += row;
+                                });
+                            })
+                            .catch(error => console.error("❌ Error fetching received plates:", error));
+                    }
 
-            setInterval(fetchDashboardData, 5000);
-            window.onload = function () {
-    initTrackingMap();
-    setInterval(updateTracking, 5000);
-    showTrackingTab("live");
-};
+                    setInterval(fetchDashboardData, 5000);
+                    window.onload = function () {
+                        initTrackingMap();
+                        setInterval(updateTracking, 5000);
+                        showTrackingTab("live");
+                    };
 
-        </script>
+                </script>
 
 </body>
 

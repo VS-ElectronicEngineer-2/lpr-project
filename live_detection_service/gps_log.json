@@ -334,5 +334,21 @@
         "start_time": "2025-04-14 16:05:55",
         "idle_time": "2025-04-14 16:05:55",
         "end_time": null
+    },
+    {
+        "latitude": 3.2080316890000002,
+        "longitude": 101.77938891980001,
+        "speed": 1.49,
+        "start_time": "2025-05-06 15:58:49",
+        "idle_time": "2025-05-06 16:06:02",
+        "end_time": null
+    },
+    {
+        "latitude": 3.2070231056000003,
+        "longitude": 101.78047371100001,
+        "speed": 23.4,
+        "start_time": "2025-05-07 09:59:34",
+        "idle_time": null,
+        "end_time": null
     }
 ]

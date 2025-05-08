@@ -21,6 +21,18 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from datetime import datetime
 import numpy as np  # Added for motion detection
+import pymysql
+from threading import Thread
+import shutil
+
+# ✅ MariaDB connection
+db = pymysql.connect(
+    host="localhost",
+    user="root",                 # Or your DB user
+    password="hananrazi",     # Replace with your actual MariaDB password
+    database="lpr_system"
+)
+cursor = db.cursor()
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # Change this to a secure key
@@ -40,7 +52,7 @@ if not os.path.exists(app.config["SNAPSHOT_FOLDER"]):
 PLATE_RECOGNIZER_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
 PARKING_API_URL = "https://mycouncil.citycarpark.my/parking/ctcp/services-listerner_mbk.php"
 NODE_API_URL = "http://localhost:5000/api/summons"
-API_TOKEN = "18cc09bdb0d72b43759a67ad9984a81ad2d153f0"
+API_TOKEN = "7a5650fef8c594f93549eb9dea557d1bcbf1b42e"
 PARKING_API_ACTION = "GetParkingRightByPlateVerify"
 
 detected_plates = []
@@ -101,7 +113,8 @@ except Exception as e:
 
 def send_gps_to_dashboard(data):
     try:
-        for url in ["http://52.163.74.67:5002/api/gps"]:
+        for url in ["http://52.163.74.67:5002/api/gps", #Azure
+        "http://192.168.8.110:5002/api/receive-plate"]: #Local
             response = requests.post(url, json=data, timeout=5)
             if response.status_code == 200:
                 print("📡 GPS forwarded to dashboard successfully:", url)
@@ -109,8 +122,6 @@ def send_gps_to_dashboard(data):
         print("❌ All dashboard URLs failed")
     except Exception as e:
         print("❌ Error sending GPS to dashboard:", e)
-
-
 
 # Authentication Routes
 @app.route("/login", methods=["GET", "POST"])
@@ -256,7 +267,6 @@ def process_frames():
                 parking_status = check_parking_status(plate_number)
                 summons_status = check_summons_status(plate_number)
 
-                # ✅ Create single dictionary
                 plate_info = {
                     "plate": plate_number,
                     "status": parking_status,
@@ -270,25 +280,58 @@ def process_frames():
 
                 with lock:
                     detected_plates.append(plate_info)
-                    send_plate_to_dashboard(plate_info)  # ✅ Send to dashboard after appending
-
+                    send_plate_to_dashboard(plate_info)
                 print(f"✅ Added Detected Plate: {plate_info}")
 
+                try:
+                    # ✅ Insert into live view table (temporary)
+                    cursor.execute("""
+                        INSERT INTO detected_plates (plate, timestamp, image_path, latitude, longitude, officer_id)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (
+                        plate_number,
+                        timestamp,
+                        snapshot_path,
+                        latitude,
+                        longitude,
+                        officer_id
+                    ))
+
+                    # ✅ Insert into permanent history table
+                    cursor.execute("""
+                        INSERT INTO plate_history (plate, timestamp, image_path, latitude, longitude, officer_id)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (
+                        plate_number,
+                        timestamp,
+                        snapshot_path,
+                        latitude,
+                        longitude,
+                        officer_id
+                    ))
+
+                    db.commit()
+                    print("✅ Plate saved to DB")
+
+                except Exception as e:
+                    print("❌ Failed to insert plate into DB:", e)
 
 # ✅ Helper to send data to dashboard
 
 def send_plate_to_dashboard(plate_info):
-    try:
-        # You can change to the real dashboard IP later (e.g., http://<azure-ip>:5002/api/receive-plate)
-        dashboard_url = "http://52.163.74.67:5002/api/receive-plate"
-        response = requests.post(dashboard_url, json=plate_info, timeout=5)
-        if response.status_code == 200:
-            print("📤 Sent to dashboard successfully")
-        else:
-            print(f"❌ Dashboard responded with {response.status_code}")
-    except Exception as e:
-        print("❌ Failed to send to dashboard:", e)
-
+    dashboard_urls = [
+        "http://52.163.74.67:5002/api/receive-plate",       # Azure dashboard
+        "http://192.168.8.110:5002/api/receive-plate"       # Local dashboard
+    ]
+    for url in dashboard_urls:
+        try:
+            response = requests.post(url, json=plate_info, timeout=5)
+            if response.status_code == 200:
+                print(f"📤 Sent to dashboard successfully: {url}")
+            else:
+                print(f"❌ Dashboard responded with {response.status_code} at {url}")
+        except Exception as e:
+            print(f"❌ Failed to send to {url}: {e}")
 
 threading.Thread(target=process_frames, daemon=True).start()
 
@@ -329,13 +372,31 @@ def video_feed():
 
 @app.route("/plates", methods=["GET"])
 def plates():
-    with lock:
-        for plate in detected_plates:
-            if "officer_id" not in plate:
-                plate["officer_id"] = stored_officer_id  # ✅ Ensure officer_id is present
-        
-        print(f"📤 Sending Detected Plates to Frontend: {detected_plates}")  # 🔍 Debugging log
-        return jsonify(list(reversed(detected_plates)))  # Reverse order to show latest first
+    try:
+        cursor.execute("""
+            SELECT plate, timestamp, image_path, latitude, longitude, officer_id 
+            FROM detected_plates ORDER BY id DESC LIMIT 100
+        """)
+        rows = cursor.fetchall()
+
+        plates_from_db = []
+        for row in rows:
+            plate_data = {
+                "plate": row[0],
+                "status": "Not Paid",  # Or fetch from API if needed
+                "time": row[1].strftime("%Y-%m-%d %H:%M:%S"),
+                "snapshot": f"http://{request.host}/{row[2]}",  # serve full snapshot URL
+                "latitude": row[3],
+                "longitude": row[4],
+                "officer_id": row[5],
+                "summons": []  # Optionally: fetch from `/api/summons`
+            }
+            plates_from_db.append(plate_data)
+
+        return jsonify(plates_from_db)
+    except Exception as e:
+        print("❌ Error loading plates from DB:", e)
+        return jsonify([]), 500
 
 @app.route("/api/user", methods=["GET"])
 def get_user():
@@ -526,12 +587,29 @@ def receive_gps():
         data["time"] = data.get("time") or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         gps_logs.append(data)
+
+        try:
+            cursor.execute("""
+                INSERT INTO gps_history (plate, timestamp, latitude, longitude, speed)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (
+                data.get("plate"),
+                data.get("time"),
+                data.get("latitude"),
+                data.get("longitude"),
+                data.get("speed", 0)
+            ))
+            db.commit()
+            print("✅ GPS saved to DB")
+        except Exception as e:
+            print("❌ Failed to insert GPS into DB:", e)
+
+        # ✅ This must be OUTSIDE the try block, no extra indent
         if len(gps_logs) > 1000:
             gps_logs.pop(0)
 
-        send_gps_to_dashboard(data)  # ✅ Send to dashboard
-
-        print(f"📡 GPS Data Received: {data}")  # Debug log
+        send_gps_to_dashboard(data)
+        print(f"📡 GPS Data Received: {data}")
         return jsonify({"status": "success"}), 200
 
     return jsonify({"error": "No data received"}), 400
@@ -631,21 +709,43 @@ def get_lpr_stats():
         "average_response_time_sec": round(average_time, 2)
     })
 
-@app.route('/reset-system', methods=['POST'])
-def reset_system():
-    global detected_plates, gps_logs
-    detected_plates.clear()
-    gps_logs.clear()
-    
-    # 🧹 Delete all snapshot images
-    folder = 'static/snapshots'
-    for f in os.listdir(folder):
-        if f.endswith('.jpg') or f.endswith('.png'):
-            os.remove(os.path.join(folder, f))
-    
-    return jsonify({'message': 'System has been reset!'})
+@app.route('/reset-queue', methods=['POST'])
+def reset_queue():
+    def clear_all():
+        global detected_plates
+        try:
+            # 1. Truncate DB table (faster than DELETE)
+            connection = pymysql.connect(
+                host='localhost',
+                user='root',
+                password='hananrazi',
+                database='lpr_system',
+                cursorclass=pymysql.cursors.DictCursor
+            )
+            with connection:
+                with connection.cursor() as cursor:
+                    cursor.execute("TRUNCATE TABLE detected_plates")
+                    connection.commit()
 
-    
+            # 2. Clear in-memory queue
+            with lock:
+                detected_plates.clear()
+
+            # 3. Delete and recreate snapshots folder (faster cleanup)
+            snapshot_folder = app.config["SNAPSHOT_FOLDER"]
+            if os.path.exists(snapshot_folder):
+                shutil.rmtree(snapshot_folder)
+            os.makedirs(snapshot_folder)
+
+            print("✅ Reset complete: DB + memory + snapshots cleared.")
+
+        except Exception as e:
+            print("❌ Reset failed:", e)
+
+    # Run the clear operation in background so user gets instant response
+    Thread(target=clear_all).start()
+
+    return jsonify({"status": "success", "message": "Reset started. Data will clear shortly."})
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=False)
