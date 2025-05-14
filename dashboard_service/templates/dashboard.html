@@ -17,6 +17,9 @@
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC_JZJCDkPLTUsb3vFKwKQzF_PDMW5gavY&callback=initTrackingMap"
         async defer></script>
 
+    <script
+        src="https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/markerclusterer.js"></script>
+
     <style>
         /* 🔹 Base Styles */
         * {
@@ -438,6 +441,11 @@
         <!-- ✅ Dispatch Map Section (Map should be separate and inside this section) -->
         <div id="dispatch-map" class="section">
             <h2>Dispatch Map</h2>
+            <div style="margin-bottom: 15px;">
+                <input type="date" id="dispatchStartDate" class="modern-btn">
+                <input type="date" id="dispatchEndDate" class="modern-btn">
+                <button class="modern-btn" onclick="fetchPlatesAndSummons()">Filter</button>
+            </div>
             <div id="map"></div> <!-- 🔹 Map div should be here -->
         </div>
 
@@ -671,28 +679,41 @@
                         doc.save("dashboard_data.pdf");
                     }
 
+                    let markerCluster;  // ✅ Cluster variable
+
                     function fetchPlatesAndSummons() {
-                        fetch("/api/received-plates")  // ✅ Updated to new endpoint
+                        const start = document.getElementById("dispatchStartDate")?.value;
+                        const end = document.getElementById("dispatchEndDate")?.value;
+
+                        let url = "/api/received-plates";
+                        if (start && end) {
+                            url += `?start=${start}&end=${end}`;
+                        }
+
+                        fetch(url)
                             .then(response => response.json())
                             .then(detectedPlates => {
-                                // ✅ Clear existing markers
                                 dispatchMarkers.forEach(marker => marker.setMap(null));
                                 dispatchMarkers = [];
+
+                                if (markerCluster) {
+                                    markerCluster.clearMarkers();  // ✅ Clear old clusters
+                                }
 
                                 let firstValidPosition = null;
 
                                 detectedPlates.forEach((plate) => {
                                     if (!plate.latitude || !plate.longitude) return;
 
-                                    let position = { lat: plate.latitude, lng: plate.longitude };
-                                    let plateNumber = plate.plate.trim().toUpperCase();
-                                    let plateStatus = plate.status.toLowerCase().trim();
+                                    const position = { lat: plate.latitude, lng: plate.longitude };
+                                    const plateNumber = plate.plate.trim().toUpperCase();
+                                    const plateStatus = plate.status.toLowerCase().trim();
 
                                     if (!firstValidPosition) {
                                         firstValidPosition = position;
                                     }
 
-                                    // 🎨 Marker color and status
+                                    // 🎨 Status Styling
                                     let infoColor = "";
                                     let statusText = "";
                                     let iconUrl = "";
@@ -715,56 +736,73 @@
                                         iconUrl = "http://maps.google.com/mapfiles/ms/icons/gray-dot.png";
                                     }
 
-
-                                    // ✅ Handle image URL fallback
-                                    let imageUrl = plate.snapshot.startsWith("http")
+                                    const imageUrl = plate.snapshot && plate.snapshot.startsWith("http")
                                         ? plate.snapshot
-                                        : `/${plate.snapshot}`;
+                                        : "/static/default-car.png";
 
-                                    let infoWindowContent = `
-                <div style="border: 3px solid ${infoColor}; border-radius: 8px; background: #fff; padding: 10px; text-align: center; width: 250px;">
-                    <div style="background: ${infoColor}; color: white; font-weight: bold; padding: 5px; border-radius: 6px;">
-                        ${statusText}
-                    </div>
-                    <p><strong>Plate:</strong> ${plateNumber}</p>
-                    <p><strong>Status:</strong> ${plate.status}</p>
-                    <p><strong>Officer ID:</strong> ${plate.officer_id || "N/A"}</p>
-                    <p><strong>Time:</strong> ${plate.time}</p>
-                    <img src="${imageUrl}" 
-                         onerror="this.onerror=null; this.src='/static/default-car.png';"
-                         alt="Vehicle Image" 
-                         style="width: 100%; height: auto; margin-top: 5px; border-radius: 5px; border: 2px solid ${infoColor};">
-                </div>`;
+                                    const infoWindowContent = `
+                    <div style="border: 3px solid ${infoColor}; border-radius: 8px; background: #fff; padding: 10px; text-align: center; width: 250px;">
+                        <div style="background: ${infoColor}; color: white; font-weight: bold; padding: 5px; border-radius: 6px;">
+                            ${statusText}
+                        </div>
+                        <p><strong>Plate:</strong> ${plateNumber}</p>
+                        <p><strong>Status:</strong> ${plate.status}</p>
+                        <p><strong>Officer ID:</strong> ${plate.officer_id || "N/A"}</p>
+                        <p><strong>Time:</strong> ${plate.time}</p>
+                        <img src="${imageUrl}" 
+                             onerror="this.onerror=null; this.src='/static/default-car.png';"
+                             alt="Vehicle Image" 
+                             style="width: 100%; height: auto; margin-top: 5px; border-radius: 5px; border: 2px solid ${infoColor};">
+                    </div>`;
 
-                                    let marker = new google.maps.Marker({
+                                    const marker = new google.maps.Marker({
                                         position,
                                         map: dispatchMap,
                                         title: `Plate: ${plateNumber}`,
                                         icon: { url: iconUrl }
                                     });
 
-                                    let infoWindow = new google.maps.InfoWindow({
-                                        content: infoWindowContent
-                                    });
-
+                                    const infoWindow = new google.maps.InfoWindow({ content: infoWindowContent });
                                     marker.addListener("click", () => infoWindow.open(dispatchMap, marker));
-                                    dispatchMarkers.push(marker);
 
-                                    console.log(`📍 Marker added for ${plateNumber} at (${position.lat}, ${position.lng})`);
+                                    dispatchMarkers.push(marker);
                                 });
 
-                                // ✅ Recenter map on the first valid marker
+                                // ✅ Add MarkerClusterer
+                                markerCluster = new MarkerClusterer(dispatchMap, dispatchMarkers, {
+                                    imagePath: "https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m"
+                                });
+
+                                // ✅ Custom cluster click with total count and plates list
+                                google.maps.event.addListener(markerCluster, "clusterclick", function (cluster) {
+                                    const markers = cluster.getMarkers();
+                                    const plateList = markers.map(marker =>
+                                        marker.getTitle().replace("Plate: ", "")
+                                    ).join("<br>");
+
+                                    const content = `
+                    <div style="max-height: 300px; overflow-y: auto;">
+                        <strong>Total Plates:</strong> ${markers.length}<br><br>
+                        ${plateList}
+                    </div>`;
+
+                                    const infoWindow = new google.maps.InfoWindow({
+                                        content: content,
+                                        position: cluster.getCenter()
+                                    });
+
+                                    infoWindow.open(dispatchMap);
+                                });
+
                                 if (firstValidPosition) {
                                     dispatchMap.setCenter(firstValidPosition);
                                     dispatchMap.setZoom(17);
-                                    console.log("📌 Map centered at first detected plate position.");
                                 } else {
                                     console.warn("⚠️ No valid markers found to center the map.");
                                 }
                             })
                             .catch(error => console.error("❌ Error fetching plates:", error));
                     }
-
 
                     let trackingMap;
                     let historicalTrackingMap;

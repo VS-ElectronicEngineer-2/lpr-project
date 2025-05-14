@@ -52,7 +52,7 @@ if not os.path.exists(app.config["SNAPSHOT_FOLDER"]):
 PLATE_RECOGNIZER_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
 PARKING_API_URL = "https://mycouncil.citycarpark.my/parking/ctcp/services-listerner_mbk.php"
 NODE_API_URL = "http://localhost:5000/api/summons"
-API_TOKEN = "7a5650fef8c594f93549eb9dea557d1bcbf1b42e"
+API_TOKEN = "31dec082ba6a3f72b16236de19f32d1559d743c9"
 PARKING_API_ACTION = "GetParkingRightByPlateVerify"
 
 detected_plates = []
@@ -264,15 +264,24 @@ def process_frames():
 
                 officer_id = stored_officer_id
 
+                # ✅ Check both parking and summons status
                 parking_status = check_parking_status(plate_number)
                 summons_status = check_summons_status(plate_number)
 
+                # ✅ Smart status logic
+                if summons_status and isinstance(summons_status, list) and len(summons_status) > 0:
+                    final_status = summons_status[0].get("status", "Not Paid")
+                elif "Paid until" in parking_status:
+                    final_status = parking_status
+                else:
+                    final_status = "Not Paid"
+
                 plate_info = {
                     "plate": plate_number,
-                    "status": parking_status,
+                    "status": final_status,
                     "summons": summons_status,
                     "time": timestamp,
-                    "snapshot": f"http://192.168.8.108:5001/{snapshot_path}",
+                    "snapshot": f"http://192.168.8.110:5001/static/snapshots/{snapshot_name}",
                     "latitude": latitude,
                     "longitude": longitude,
                     "officer_id": officer_id
@@ -284,7 +293,7 @@ def process_frames():
                 print(f"✅ Added Detected Plate: {plate_info}")
 
                 try:
-                    # ✅ Insert into live view table (temporary)
+                    # ✅ Insert into live view table
                     cursor.execute("""
                         INSERT INTO detected_plates (plate, timestamp, image_path, latitude, longitude, officer_id)
                         VALUES (%s, %s, %s, %s, %s, %s)
@@ -381,15 +390,19 @@ def plates():
 
         plates_from_db = []
         for row in rows:
+            # ✅ Match status from in-memory detected_plates
+            latest = next((p for p in detected_plates if p["plate"] == row[0]), None)
+            status = latest["status"] if latest else "Not Paid"
+
             plate_data = {
                 "plate": row[0],
-                "status": "Not Paid",  # Or fetch from API if needed
+                "status": status,  # ✅ Use real-time status from memory
                 "time": row[1].strftime("%Y-%m-%d %H:%M:%S"),
-                "snapshot": f"http://{request.host}/{row[2]}",  # serve full snapshot URL
+                "snapshot": f"http://{request.host}/{row[2]}",
                 "latitude": row[3],
                 "longitude": row[4],
                 "officer_id": row[5],
-                "summons": []  # Optionally: fetch from `/api/summons`
+                "summons": latest["summons"] if latest else []
             }
             plates_from_db.append(plate_data)
 
