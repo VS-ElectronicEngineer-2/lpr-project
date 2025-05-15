@@ -17,8 +17,9 @@
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC_JZJCDkPLTUsb3vFKwKQzF_PDMW5gavY&callback=initTrackingMap"
         async defer></script>
 
-    <script
-        src="https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/markerclusterer.js"></script>
+
+    <!-- ✅ MarkerClusterer Library -->
+    <script src="https://unpkg.com/@googlemaps/markerclustererplus/dist/index.min.js"></script>
 
     <style>
         /* 🔹 Base Styles */
@@ -562,7 +563,7 @@
 
                         dispatchMap = new google.maps.Map(dispatchMapDiv, {
                             center: { lat: 3.1390, lng: 101.6869 }, // Default Kuala Lumpur
-                            zoom: 13,
+                            zoom: 10,
                             mapTypeId: "roadmap"
                         });
 
@@ -679,7 +680,8 @@
                         doc.save("dashboard_data.pdf");
                     }
 
-                    let markerCluster;  // ✅ Cluster variable
+
+                    let markerCluster;
 
                     function fetchPlatesAndSummons() {
                         const start = document.getElementById("dispatchStartDate")?.value;
@@ -697,7 +699,7 @@
                                 dispatchMarkers = [];
 
                                 if (markerCluster) {
-                                    markerCluster.clearMarkers();  // ✅ Clear old clusters
+                                    markerCluster.clearMarkers();
                                 }
 
                                 let firstValidPosition = null;
@@ -713,11 +715,7 @@
                                         firstValidPosition = position;
                                     }
 
-                                    // 🎨 Status Styling
-                                    let infoColor = "";
-                                    let statusText = "";
-                                    let iconUrl = "";
-
+                                    let infoColor = "", statusText = "", iconUrl = "";
                                     if (plateStatus.includes("scofflaw")) {
                                         infoColor = "blue";
                                         statusText = "Scofflaw Alert";
@@ -736,55 +734,94 @@
                                         iconUrl = "http://maps.google.com/mapfiles/ms/icons/gray-dot.png";
                                     }
 
-                                    const imageUrl = plate.snapshot && plate.snapshot.startsWith("http")
-                                        ? plate.snapshot
-                                        : "/static/default-car.png";
+                                    const imageUrl = plate.snapshot?.startsWith("http") ? plate.snapshot : "/static/default-car.png";
 
                                     const infoWindowContent = `
-                    <div style="border: 3px solid ${infoColor}; border-radius: 8px; background: #fff; padding: 10px; text-align: center; width: 250px;">
-                        <div style="background: ${infoColor}; color: white; font-weight: bold; padding: 5px; border-radius: 6px;">
-                            ${statusText}
-                        </div>
-                        <p><strong>Plate:</strong> ${plateNumber}</p>
-                        <p><strong>Status:</strong> ${plate.status}</p>
-                        <p><strong>Officer ID:</strong> ${plate.officer_id || "N/A"}</p>
-                        <p><strong>Time:</strong> ${plate.time}</p>
-                        <img src="${imageUrl}" 
-                             onerror="this.onerror=null; this.src='/static/default-car.png';"
-                             alt="Vehicle Image" 
-                             style="width: 100%; height: auto; margin-top: 5px; border-radius: 5px; border: 2px solid ${infoColor};">
-                    </div>`;
+                            <div style="border: 3px solid ${infoColor}; border-radius: 8px; background: #fff; padding: 10px; text-align: center; width: 250px;">
+                                <div style="background: ${infoColor}; color: white; font-weight: bold; padding: 5px; border-radius: 6px;">
+                                    ${statusText}
+                                </div>
+                                <p><strong>Plate:</strong> ${plateNumber}</p>
+                                <p><strong>Status:</strong> ${plate.status}</p>
+                                <p><strong>Officer ID:</strong> ${plate.officer_id || "N/A"}</p>
+                                <p><strong>Time:</strong> ${plate.time}</p>
+                                <img src="${imageUrl}" 
+                                    onerror="this.onerror=null; this.src='/static/default-car.png';"
+                                    alt="Vehicle Image" 
+                                    style="width: 100%; height: auto; margin-top: 5px; border-radius: 5px; border: 2px solid ${infoColor};">
+                            </div>`;
 
                                     const marker = new google.maps.Marker({
                                         position,
                                         map: dispatchMap,
                                         title: `Plate: ${plateNumber}`,
-                                        icon: { url: iconUrl }
+                                        icon: { url: iconUrl },
+                                        plateStatus: plateStatus
                                     });
 
                                     const infoWindow = new google.maps.InfoWindow({ content: infoWindowContent });
                                     marker.addListener("click", () => infoWindow.open(dispatchMap, marker));
-
                                     dispatchMarkers.push(marker);
                                 });
 
-                                // ✅ Add MarkerClusterer
                                 markerCluster = new MarkerClusterer(dispatchMap, dispatchMarkers, {
-                                    imagePath: "https://developers.google.com/maps/documentation/javascript/examples/markerclusterer/m"
+                                    styles: [{
+                                        height: 50,
+                                        width: 50,
+                                        textColor: "white",
+                                        textSize: 14,
+                                        url: "", // We override it with `calculator`
+                                    }],
+                                    calculator: function (markers, numStyles) {
+                                        const counts = { red: 0, green: 0, blue: 0 };
+
+                                        markers.forEach(marker => {
+                                            if (marker.plateStatus.includes("scofflaw")) counts.blue++;
+                                            else if (marker.plateStatus.includes("not paid")) counts.red++;
+                                            else if (marker.plateStatus.includes("paid")) counts.green++;
+                                        });
+
+                                        let color = "gray";
+                                        if (counts.red >= counts.green && counts.red >= counts.blue) color = "red";
+                                        else if (counts.green >= counts.red && counts.green >= counts.blue) color = "green";
+                                        else if (counts.blue >= counts.red && counts.blue >= counts.green) color = "blue";
+
+                                        const svg = window.btoa(`
+      <svg xmlns='http://www.w3.org/2000/svg' width='50' height='50'>
+        <circle cx='25' cy='25' r='20' fill='${color}' />
+        <text x='25' y='30' text-anchor='middle' fill='white' font-size='16'>${markers.length}</text>
+      </svg>
+    `);
+
+                                        return {
+                                            text: markers.length.toString(),
+                                            index: 1,
+                                            title: `Plates: ${markers.length}`,
+                                            url: `data:image/svg+xml;base64,${svg}`
+                                        };
+                                    }
                                 });
 
-                                // ✅ Custom cluster click with total count and plates list
                                 google.maps.event.addListener(markerCluster, "clusterclick", function (cluster) {
                                     const markers = cluster.getMarkers();
-                                    const plateList = markers.map(marker =>
-                                        marker.getTitle().replace("Plate: ", "")
-                                    ).join("<br>");
+                                    const breakdown = { scofflaw: 0, notPaid: 0, paid: 0, unknown: 0 };
+
+                                    markers.forEach(marker => {
+                                        const status = marker.plateStatus;
+                                        if (status.includes("scofflaw")) breakdown.scofflaw++;
+                                        else if (status.includes("not paid")) breakdown.notPaid++;
+                                        else if (status.includes("paid")) breakdown.paid++;
+                                        else breakdown.unknown++;
+                                    });
 
                                     const content = `
-                    <div style="max-height: 300px; overflow-y: auto;">
-                        <strong>Total Plates:</strong> ${markers.length}<br><br>
-                        ${plateList}
-                    </div>`;
+                            <div style="min-width: 200px">
+                                <strong>Total Plates:</strong> ${markers.length}<br>
+                                <span style='color:blue;'>Scofflaw:</span> ${breakdown.scofflaw}<br>
+                                <span style='color:red;'>Not Paid:</span> ${breakdown.notPaid}<br>
+                                <span style='color:green;'>Paid:</span> ${breakdown.paid}<br>
+                                <span style='color:gray;'>Unknown:</span> ${breakdown.unknown}
+                            </div>`;
 
                                     const infoWindow = new google.maps.InfoWindow({
                                         content: content,
@@ -796,9 +833,7 @@
 
                                 if (firstValidPosition) {
                                     dispatchMap.setCenter(firstValidPosition);
-                                    dispatchMap.setZoom(17);
-                                } else {
-                                    console.warn("⚠️ No valid markers found to center the map.");
+                                    dispatchMap.setZoom(14);
                                 }
                             })
                             .catch(error => console.error("❌ Error fetching plates:", error));
