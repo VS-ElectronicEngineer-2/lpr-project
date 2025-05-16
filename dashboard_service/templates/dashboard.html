@@ -19,7 +19,7 @@
 
 
     <!-- ✅ MarkerClusterer Library -->
-    <script src="https://unpkg.com/@googlemaps/markerclustererplus/dist/index.min.js"></script>
+    <script src="https://unpkg.com/@googlemaps/markerclusterer/dist/index.min.js"></script>
 
     <style>
         /* 🔹 Base Styles */
@@ -445,6 +445,8 @@
             <div style="margin-bottom: 15px;">
                 <input type="date" id="dispatchStartDate" class="modern-btn">
                 <input type="date" id="dispatchEndDate" class="modern-btn">
+                <input type="text" id="dispatchSearchInput" placeholder="Search Plate..." class="modern-btn"
+                    oninput="filterDispatchMarkers()">
                 <button class="modern-btn" onclick="fetchPlatesAndSummons()">Filter</button>
             </div>
             <div id="map"></div> <!-- 🔹 Map div should be here -->
@@ -699,7 +701,7 @@
                                 dispatchMarkers = [];
 
                                 if (markerCluster) {
-                                    markerCluster.clearMarkers();
+                                    markerCluster.setMap(null);
                                 }
 
                                 let firstValidPosition = null;
@@ -737,26 +739,26 @@
                                     const imageUrl = plate.snapshot?.startsWith("http") ? plate.snapshot : "/static/default-car.png";
 
                                     const infoWindowContent = `
-                            <div style="border: 3px solid ${infoColor}; border-radius: 8px; background: #fff; padding: 10px; text-align: center; width: 250px;">
-                                <div style="background: ${infoColor}; color: white; font-weight: bold; padding: 5px; border-radius: 6px;">
-                                    ${statusText}
-                                </div>
-                                <p><strong>Plate:</strong> ${plateNumber}</p>
-                                <p><strong>Status:</strong> ${plate.status}</p>
-                                <p><strong>Officer ID:</strong> ${plate.officer_id || "N/A"}</p>
-                                <p><strong>Time:</strong> ${plate.time}</p>
-                                <img src="${imageUrl}" 
-                                    onerror="this.onerror=null; this.src='/static/default-car.png';"
-                                    alt="Vehicle Image" 
-                                    style="width: 100%; height: auto; margin-top: 5px; border-radius: 5px; border: 2px solid ${infoColor};">
-                            </div>`;
+                    <div style="border: 3px solid ${infoColor}; border-radius: 8px; background: #fff; padding: 10px; text-align: center; width: 250px;">
+                        <div style="background: ${infoColor}; color: white; font-weight: bold; padding: 5px; border-radius: 6px;">
+                            ${statusText}
+                        </div>
+                        <p><strong>Plate:</strong> ${plateNumber}</p>
+                        <p><strong>Status:</strong> ${plate.status}</p>
+                        <p><strong>Officer ID:</strong> ${plate.officer_id || "N/A"}</p>
+                        <p><strong>Time:</strong> ${plate.time}</p>
+                        <img src="${imageUrl}" 
+                            onerror="this.onerror=null; this.src='/static/default-car.png';"
+                            alt="Vehicle Image" 
+                            style="width: 100%; height: auto; margin-top: 5px; border-radius: 5px; border: 2px solid ${infoColor};">
+                    </div>`;
 
                                     const marker = new google.maps.Marker({
                                         position,
-                                        map: dispatchMap,
                                         title: `Plate: ${plateNumber}`,
                                         icon: { url: iconUrl },
-                                        plateStatus: plateStatus
+                                        plateStatus: plateStatus,
+                                        plateNumber: plateNumber
                                     });
 
                                     const infoWindow = new google.maps.InfoWindow({ content: infoWindowContent });
@@ -764,71 +766,39 @@
                                     dispatchMarkers.push(marker);
                                 });
 
-                                markerCluster = new MarkerClusterer(dispatchMap, dispatchMarkers, {
-                                    styles: [{
-                                        height: 50,
-                                        width: 50,
-                                        textColor: "white",
-                                        textSize: 14,
-                                        url: "", // We override it with `calculator`
-                                    }],
-                                    calculator: function (markers, numStyles) {
-                                        const counts = { red: 0, green: 0, blue: 0 };
+                                // ✅ NEW CLUSTER LOGIC with SVG and count
+                                markerCluster = new markerClusterer.MarkerClusterer({
+                                    map: dispatchMap,
+                                    markers: dispatchMarkers,
+                                    renderer: {
+                                        render: ({ count, position, markers }) => {
+                                            let red = 0, green = 0, blue = 0;
+                                            markers.forEach(marker => {
+                                                if (marker.plateStatus.includes("scofflaw")) blue++;
+                                                else if (marker.plateStatus.includes("not paid")) red++;
+                                                else if (marker.plateStatus.includes("paid")) green++;
+                                            });
 
-                                        markers.forEach(marker => {
-                                            if (marker.plateStatus.includes("scofflaw")) counts.blue++;
-                                            else if (marker.plateStatus.includes("not paid")) counts.red++;
-                                            else if (marker.plateStatus.includes("paid")) counts.green++;
-                                        });
+                                            let dominant = "gray";
+                                            if (red >= green && red >= blue) dominant = "red";
+                                            else if (green >= red && green >= blue) dominant = "green";
+                                            else if (blue >= red && blue >= green) dominant = "blue";
 
-                                        let color = "gray";
-                                        if (counts.red >= counts.green && counts.red >= counts.blue) color = "red";
-                                        else if (counts.green >= counts.red && counts.green >= counts.blue) color = "green";
-                                        else if (counts.blue >= counts.red && counts.blue >= counts.green) color = "blue";
+                                            const svg = window.btoa(`
+                            <svg xmlns='http://www.w3.org/2000/svg' width='50' height='50'>
+                                <circle cx='25' cy='25' r='20' fill='${dominant}' />
+                                <text x='25' y='30' text-anchor='middle' fill='white' font-size='16'>${count}</text>
+                            </svg>`);
 
-                                        const svg = window.btoa(`
-      <svg xmlns='http://www.w3.org/2000/svg' width='50' height='50'>
-        <circle cx='25' cy='25' r='20' fill='${color}' />
-        <text x='25' y='30' text-anchor='middle' fill='white' font-size='16'>${markers.length}</text>
-      </svg>
-    `);
-
-                                        return {
-                                            text: markers.length.toString(),
-                                            index: 1,
-                                            title: `Plates: ${markers.length}`,
-                                            url: `data:image/svg+xml;base64,${svg}`
-                                        };
+                                            return new google.maps.Marker({
+                                                position,
+                                                icon: {
+                                                    url: `data:image/svg+xml;base64,${svg}`,
+                                                    scaledSize: new google.maps.Size(50, 50)
+                                                }
+                                            });
+                                        }
                                     }
-                                });
-
-                                google.maps.event.addListener(markerCluster, "clusterclick", function (cluster) {
-                                    const markers = cluster.getMarkers();
-                                    const breakdown = { scofflaw: 0, notPaid: 0, paid: 0, unknown: 0 };
-
-                                    markers.forEach(marker => {
-                                        const status = marker.plateStatus;
-                                        if (status.includes("scofflaw")) breakdown.scofflaw++;
-                                        else if (status.includes("not paid")) breakdown.notPaid++;
-                                        else if (status.includes("paid")) breakdown.paid++;
-                                        else breakdown.unknown++;
-                                    });
-
-                                    const content = `
-                            <div style="min-width: 200px">
-                                <strong>Total Plates:</strong> ${markers.length}<br>
-                                <span style='color:blue;'>Scofflaw:</span> ${breakdown.scofflaw}<br>
-                                <span style='color:red;'>Not Paid:</span> ${breakdown.notPaid}<br>
-                                <span style='color:green;'>Paid:</span> ${breakdown.paid}<br>
-                                <span style='color:gray;'>Unknown:</span> ${breakdown.unknown}
-                            </div>`;
-
-                                    const infoWindow = new google.maps.InfoWindow({
-                                        content: content,
-                                        position: cluster.getCenter()
-                                    });
-
-                                    infoWindow.open(dispatchMap);
                                 });
 
                                 if (firstValidPosition) {
@@ -837,6 +807,20 @@
                                 }
                             })
                             .catch(error => console.error("❌ Error fetching plates:", error));
+                    }
+
+                    function filterDispatchMarkers() {
+                        const query = document.getElementById("dispatchSearchInput").value.trim().toUpperCase();
+
+                        dispatchMarkers.forEach(marker => {
+                            const plate = marker.plateNumber || "";
+                            marker.setVisible(!query || plate.includes(query));
+                        });
+
+                        // Refresh cluster display
+                        if (markerCluster) {
+                            markerCluster.repaint();
+                        }
                     }
 
                     let trackingMap;
