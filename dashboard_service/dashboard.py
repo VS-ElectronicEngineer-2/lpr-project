@@ -1,15 +1,31 @@
 from flask import Flask, jsonify, request, render_template
 from datetime import datetime
-import os
+import pymysql
 
-app = Flask(__name__, static_url_path='/static')  # ✅ Enable static file support
+app = Flask(__name__, static_url_path='/static')
 
-# GPS logs and playback data
-GPS_LOGS = []
+# ✅ MySQL Connection
+db = pymysql.connect(
+    host="localhost",
+    user="root",
+    password="hananrazi",
+    database="lpr_system"
+)
+cursor = db.cursor(pymysql.cursors.DictCursor)
+
+# ========================
+# 🔹 Web Pages
+# ========================
 
 @app.route("/")
 def index():
     return render_template("dashboard.html")
+
+# ========================
+# 🔹 GPS API
+# ========================
+
+GPS_LOGS = []
 
 @app.route("/gps-tracking")
 def gps_tracking():
@@ -45,8 +61,9 @@ def receive_gps():
         return jsonify({"status": "received"})
     return jsonify({"error": "no data"}), 400
 
-# Detected plates storage
-received_plates = []
+# ========================
+# 🔹 Plate API (Persistent)
+# ========================
 
 @app.route("/api/receive-plate", methods=["POST"])
 def receive_plate():
@@ -57,38 +74,75 @@ def receive_plate():
 
         snapshot = data.get("snapshot", "")
         if not snapshot.startswith("http"):
-            # If snapshot is not a full URL, fall back to default image
             data["snapshot"] = "static/default-car.png"
 
-        received_plates.append(data)
-        print(f"📥 Received plate: {data.get('plate')} | Snapshot: {data.get('snapshot')}")
+        try:
+            print("📝 Inserting into dashboard_plates:", data)
+            cursor.execute("""
+                INSERT INTO dashboard_plates (plate, status, snapshot, time, latitude, longitude, officer_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (
+                data.get("plate"),
+                data.get("status"),
+                data.get("snapshot"),
+                data.get("time"),
+                data.get("latitude"),
+                data.get("longitude"),
+                data.get("officer_id")
+            ))
+            db.commit()
+            print("✅ Plate saved.")
+        except Exception as e:
+            print("❌ Failed to insert into dashboard_plates:", e)
+
         return jsonify({"status": "success"}), 200
 
     return jsonify({"error": "No data received"}), 400
-
-from datetime import datetime
 
 @app.route("/api/received-plates", methods=["GET"])
 def get_received_plates():
     start = request.args.get("start")
     end = request.args.get("end")
 
-    def is_within_range(plate):
-        try:
-            if not plate.get("time"):
-                return False
-            plate_date = datetime.strptime(plate["time"], "%Y-%m-%d %H:%M:%S").date()
-            if start and end:
-                start_date = datetime.strptime(start, "%Y-%m-%d").date()
-                end_date = datetime.strptime(end, "%Y-%m-%d").date()
-                return start_date <= plate_date <= end_date
-            return True
-        except Exception as e:
-            print("❌ Date parsing error:", e)
-            return False
+    try:
+        db.ping(reconnect=True)  # ✅ Fix for "Packet sequence" or idle timeout
+        query = "SELECT * FROM dashboard_plates"
+        params = []
 
-    filtered = [p for p in received_plates if is_within_range(p)]
-    return jsonify(filtered[::-1])  # Show latest first
+        if start and end:
+            query += " WHERE DATE(time) BETWEEN %s AND %s"
+            params = [start, end]
+
+        query += " ORDER BY id DESC"
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+
+        plates = []
+        for row in rows:
+            time_value = row["time"]
+            if isinstance(time_value, str):
+                formatted_time = time_value
+            else:
+                formatted_time = time_value.strftime("%Y-%m-%d %H:%M:%S")
+
+            plates.append({
+                "plate": row["plate"],
+                "status": row["status"],
+                "snapshot": row["snapshot"],
+                "time": formatted_time,
+                "latitude": row["latitude"],
+                "longitude": row["longitude"],
+                "officer_id": row["officer_id"]
+            })
+
+        return jsonify(plates)
+    except Exception as e:
+        print("❌ Error retrieving plates:", e)
+        return jsonify({"error": str(e)}), 500
+
+# ========================
+# 🔹 Run Server
+# ========================
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5002, debug=False)
