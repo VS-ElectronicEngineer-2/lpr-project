@@ -114,7 +114,7 @@ except Exception as e:
 def send_gps_to_dashboard(data):
     try:
         for url in ["http://52.163.74.67:5002/api/gps", #Azure
-        "http://192.168.8.110:5002/api/receive-plate"]: #Local
+        "http://192.168.8.108:5002/api/receive-plate"]: #Local
             response = requests.post(url, json=data, timeout=5)
             if response.status_code == 200:
                 print("📡 GPS forwarded to dashboard successfully:", url)
@@ -281,7 +281,7 @@ def process_frames():
                     "status": final_status,
                     "summons": summons_status,
                     "time": timestamp,
-                    "snapshot": f"http://192.168.8.110:5001/static/snapshots/{snapshot_name}",
+                    "snapshot": f"http://192.168.8.108:5001/static/snapshots/{snapshot_name}",
                     "latitude": latitude,
                     "longitude": longitude,
                     "officer_id": officer_id
@@ -330,7 +330,7 @@ def process_frames():
 def send_plate_to_dashboard(plate_info):
     dashboard_urls = [
         "http://52.163.74.67:5002/api/receive-plate",       # Azure dashboard
-        "http://192.168.8.110:5002/api/receive-plate"       # Local dashboard
+        "http://192.168.8.108:5002/api/receive-plate"       # Local dashboard
     ]
     for url in dashboard_urls:
         try:

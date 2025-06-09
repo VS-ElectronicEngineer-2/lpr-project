@@ -9,7 +9,7 @@ from datetime import datetime
 API_URLS = [
     "http://localhost:5001/api/gps",         # Raspberry Pi LPR backend
     "http://52.163.74.67:5002/api/gps",      # Azure/Dashboard server
-    "http://192.168.8.110:5002/api/gps"      # Optional: Local dashboard access via IP
+    "http://192.168.8.108:5002/api/gps"      # Optional: Local dashboard access via IP
 ]
 
 # Movement tracking thresholds

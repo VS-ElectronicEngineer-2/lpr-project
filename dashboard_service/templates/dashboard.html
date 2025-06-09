@@ -907,17 +907,20 @@
                         initTrackingMap();
                     }
 
-
-
                     function searchTrackingData() {
                         let plateNumber = document.getElementById("plateSearch").value.trim();
+                        let start = document.getElementById("startDate").value;
+                        let end = document.getElementById("endDate").value;
+
                         if (!plateNumber) {
                             alert("Please enter a plate number.");
                             return;
                         }
 
-                        let start = document.getElementById("startDate").value;
-                        let end = document.getElementById("endDate").value;
+                        if (!start || !end) {
+                            alert("Please select both start and end dates.");
+                            return;
+                        }
 
                         fetch(`/gps-tracking-history?plate=${plateNumber}&start=${start}&end=${end}`)
                             .then(response => response.json())
