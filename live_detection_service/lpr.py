@@ -24,6 +24,34 @@ import numpy as np  # Added for motion detection
 import pymysql
 from threading import Thread
 import shutil
+import socket
+from pathlib import Path
+import json
+
+OFFLINE_FILE = "offline_queue.json"
+
+def is_connected(host="8.8.8.8", port=53, timeout=3):
+    try:
+        socket.setdefaulttimeout(timeout)
+        socket.socket(socket.AF_INET, socket.SOCK_STREAM).connect((host, port))
+        return True
+    except socket.error:
+        return False
+
+def save_offline(data):
+    path = Path(OFFLINE_FILE)
+    if path.exists():
+        with open(path, "r") as f:
+            try:
+                offline_data = json.load(f)
+            except json.JSONDecodeError:
+                offline_data = []
+    else:
+        offline_data = []
+
+    offline_data.append(data)
+    with open(path, "w") as f:
+        json.dump(offline_data, f, indent=2)
 
 # ✅ MariaDB connection
 db = pymysql.connect(
@@ -112,16 +140,26 @@ except Exception as e:
     picam2 = None
 
 def send_gps_to_dashboard(data):
-    try:
-        for url in ["http://52.163.74.67:5002/api/gps", #Azure
-        "http://192.168.8.108:5002/api/receive-plate"]: #Local
+    if not is_connected():
+        print("📴 No internet, saving GPS to offline queue")
+        save_offline({"type": "gps", "data": data})
+        return
+
+    urls = [
+        "http://52.163.74.67:5002/api/gps",
+        "http://192.168.8.108:5002/api/gps"
+    ]
+    for url in urls:
+        try:
             response = requests.post(url, json=data, timeout=5)
             if response.status_code == 200:
-                print("📡 GPS forwarded to dashboard successfully:", url)
+                print("📡 GPS forwarded successfully:", url)
                 return
-        print("❌ All dashboard URLs failed")
-    except Exception as e:
-        print("❌ Error sending GPS to dashboard:", e)
+        except Exception as e:
+            print("❌ Failed GPS upload:", e)
+
+    print("📦 Saving GPS to offline queue (all URLs failed)")
+    save_offline({"type": "gps", "data": data})
 
 # Authentication Routes
 @app.route("/login", methods=["GET", "POST"])
@@ -328,19 +366,26 @@ def process_frames():
 # ✅ Helper to send data to dashboard
 
 def send_plate_to_dashboard(plate_info):
+    if not is_connected():
+        print("📴 No internet, saving plate to offline queue")
+        save_offline({"type": "plate", "data": plate_info})
+        return
+
     dashboard_urls = [
-        "http://52.163.74.67:5002/api/receive-plate",       # Azure dashboard
-        "http://192.168.8.108:5002/api/receive-plate"       # Local dashboard
+        "http://52.163.74.67:5002/api/receive-plate",
+        "http://192.168.8.108:5002/api/receive-plate"
     ]
     for url in dashboard_urls:
         try:
             response = requests.post(url, json=plate_info, timeout=5)
             if response.status_code == 200:
-                print(f"📤 Sent to dashboard successfully: {url}")
-            else:
-                print(f"❌ Dashboard responded with {response.status_code} at {url}")
+                print(f"📤 Sent plate to dashboard: {url}")
+                return
         except Exception as e:
-            print(f"❌ Failed to send to {url}: {e}")
+            print(f"❌ Failed to send plate to {url}: {e}")
+
+    print("📦 Saving plate to offline queue (all URLs failed)")
+    save_offline({"type": "plate", "data": plate_info})
 
 threading.Thread(target=process_frames, daemon=True).start()
 
@@ -759,6 +804,53 @@ def reset_queue():
     Thread(target=clear_all).start()
 
     return jsonify({"status": "success", "message": "Reset started. Data will clear shortly."})
+
+@app.route("/api/status", methods=["GET"])
+def api_status():
+    return jsonify({"status": "online" if is_connected() else "offline"})
+
+def sync_offline_data():
+    if not is_connected():
+        return
+
+    path = Path(OFFLINE_FILE)
+    if not path.exists():
+        return
+
+    with open(path, "r") as f:
+        try:
+            queue = json.load(f)
+        except json.JSONDecodeError:
+            queue = []
+
+    successful = []
+    for item in queue:
+        try:
+            if item["type"] == "plate":
+                res = requests.post("http://52.163.74.67:5002/api/receive-plate", json=item["data"], timeout=5)
+            elif item["type"] == "gps":
+                res = requests.post("http://52.163.74.67:5002/api/gps", json=item["data"], timeout=5)
+            else:
+                continue
+
+            if res.status_code == 200:
+                successful.append(item)
+        except:
+            continue
+
+    remaining = [q for q in queue if q not in successful]
+    with open(OFFLINE_FILE, "w") as f:
+        json.dump(remaining, f, indent=2)
+
+def start_sync_loop():
+    def loop():
+        while True:
+            sync_offline_data()
+            time.sleep(30)
+    threading.Thread(target=loop, daemon=True).start()
+
+# Start offline sync loop
+start_sync_loop()
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=False)

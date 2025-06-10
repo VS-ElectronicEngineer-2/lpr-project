@@ -164,7 +164,13 @@
 <body>
 
     <header>
-        <div class="title">License Plate Recognition Dashboard</div>
+        <div class="title">
+            License Plate Recognition Dashboard
+            <span id="connection-status"
+                style="margin-left: 15px; padding: 5px 10px; border-radius: 5px; background-color: red; color: white; font-size: 12px; font-weight: bold;">
+                Offline Mode
+            </span>
+        </div>
         <div class="profile">
             <button class="profile-btn">HM</button>
             <div class="dropdown">
@@ -477,6 +483,29 @@
                 .catch(error => console.error("❌ Error fetching summons data:", error));
         };
 
+        function updateConnectionStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    const label = document.getElementById("connection-status");
+                    if (data.status === "online") {
+                        label.innerText = "Online";
+                        label.style.backgroundColor = "green";
+                    } else {
+                        label.innerText = "Offline Mode";
+                        label.style.backgroundColor = "red";
+                    }
+                })
+                .catch(() => {
+                    const label = document.getElementById("connection-status");
+                    label.innerText = "Offline Mode";
+                    label.style.backgroundColor = "red";
+                });
+        }
+
+        // Run once on page load + repeat every 10 seconds
+        updateConnectionStatus();
+        setInterval(updateConnectionStatus, 10000);
 
         fetchData();
         setInterval(fetchData, 5000);
