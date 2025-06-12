@@ -1222,5 +1222,45 @@
         "start_time": "2025-06-10 11:17:45",
         "idle_time": "2025-06-10 11:17:45",
         "end_time": null
+    },
+    {
+        "latitude": 3.207520333,
+        "longitude": 101.780174333,
+        "speed": 0.1,
+        "start_time": "2025-06-10 15:14:46",
+        "idle_time": "2025-06-10 15:14:46",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207520333,
+        "longitude": 101.780174333,
+        "speed": 0.1,
+        "start_time": "2025-06-10 15:14:46",
+        "idle_time": "2025-06-10 15:14:46",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207572667,
+        "longitude": 101.780151333,
+        "speed": 0.46,
+        "start_time": "2025-06-10 16:28:59",
+        "idle_time": "2025-06-10 16:28:59",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207572667,
+        "longitude": 101.780151333,
+        "speed": 0.46,
+        "start_time": "2025-06-10 16:28:59",
+        "idle_time": "2025-06-10 16:28:59",
+        "end_time": null
+    },
+    {
+        "latitude": 3.20760898,
+        "longitude": 101.780121741,
+        "speed": 0.21,
+        "start_time": "2025-06-11 16:42:10",
+        "idle_time": "2025-06-11 16:42:10",
+        "end_time": null
     }
 ]
