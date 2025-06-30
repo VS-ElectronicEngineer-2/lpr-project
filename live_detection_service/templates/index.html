@@ -183,7 +183,19 @@
     <div class="dashboard">
         <div class="left">
             <h2>Live Stream</h2>
-            <img id="liveStreamVideo" src="/video_feed" class="live-video" alt="Live Stream">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <div style="flex: 1; text-align: center;">
+                    <div style="font-weight: bold; margin-bottom: 5px;">📷 Left Camera</div>
+                    <img id="leftCamera" src="http://192.168.8.108:5001/video_feed" class="live-video"
+                        alt="Left Camera">
+                </div>
+                <div style="flex: 1; text-align: center;">
+                    <div style="font-weight: bold; margin-bottom: 5px;">📷 Right Camera</div>
+                    <img id="rightCamera" src="http://192.168.8.141:5001/video_feed" class="live-video"
+                        alt="Right Camera">
+                </div>
+            </div>
+
             <div class="controls">
                 <button class="btn start" onclick="startLiveStream()">Start</button>
                 <button class="btn stop" onclick="stopLiveStream()">Stop</button>
@@ -213,11 +225,13 @@
         const { jsPDF } = window.jspdf;
 
         function startLiveStream() {
-            document.getElementById("liveStreamVideo").src = "/video_feed";
+            document.getElementById("leftCamera").src = "http://192.168.8.108:5001/video_feed";
+            document.getElementById("rightCamera").src = "http://192.168.8.141:5001/video_feed";
         }
 
         function stopLiveStream() {
-            document.getElementById("liveStreamVideo").src = "";
+            document.getElementById("leftCamera").src = "";
+            document.getElementById("rightCamera").src = "";
         }
 
         function resetSystem() {
@@ -232,83 +246,75 @@
         }
 
         function fetchData() {
-            fetch("/plates")
-                .then(response => response.json())
-                .then(detectedData => {
-                    fetch("/summons")
-                        .then(response => response.json())
-                        .then(summonsData => {
-                            let livestreamTable = document.getElementById("livestreamTable");
-                            livestreamTable.innerHTML = ""; // Clear previous data
+            const today = new Date().toISOString().split("T")[0];
 
-                            let allPlates = []; // Store plates with queue numbers
+            Promise.all([
+                fetch(`/api/received-plates?start=${today}&end=${today}`).then(res => res.json()),
+                fetch("/summons").then(res => res.json())
+            ])
+                .then(([allPlates, summonsData]) => {
+                    let livestreamTable = document.getElementById("livestreamTable");
+                    livestreamTable.innerHTML = "";
 
-                            // Combine detected plates and summons
-                            detectedData.forEach(plate => {
-                                allPlates.push({
-                                    plate: plate.plate,
-                                    status: plate.status,
-                                    time: plate.time,
-                                    isScofflaw: false,
-                                    summonsNo: "" // Default empty
-                                });
-                            });
+                    let allPlatesWithFlags = [];
 
-                            // Mark summons plates and assign queue numbers
-                            let scofflawQueue = 1; // Start summons queue at 1
-                            summonsData.forEach(summon => {
-                                let existing = allPlates.find(p => p.plate === summon.plate);
-                                if (existing) {
-                                    existing.status = "Scofflaw";
-                                    existing.isScofflaw = true;
-                                    existing.summonsNo = `${scofflawQueue}`; // Assign queue number
-                                    scofflawQueue++;
-                                } else {
-                                    allPlates.push({
-                                        plate: summon.plate,
-                                        status: "Scofflaw",
-                                        time: "N/A",
-                                        isScofflaw: true,
-                                        summonsNo: `${scofflawQueue}`
-                                    });
-                                    scofflawQueue++;
-                                }
-                            });
-
-                            // Display with queue numbers
-                            allPlates.forEach((entry, index) => {
-                                let statusColor = entry.status.includes("Not Paid") ? "red" :
-                                    entry.status.includes("Paid") ? "green" :
-                                        "blue";  // Default blue for scofflaw
-
-                                let summonsColumn = entry.isScofflaw ? entry.summonsNo : "-"; // Show queue number for scofflaw only
-
-                                let actionButton = entry.isScofflaw
-                                    ? `<button onclick="generatePDF('${entry.plate}')" 
-       style="background: blue; color: white; border: none; padding: 5px; cursor: pointer;">
-       Download PDF
-    </button>`
-                                    : "-";
-
-                                console.log(`📥 Adding Download Button for: ${entry.plate}`); // ✅ Debugging Log
-
-                                let rowHTML = `
-    <tr>
-        <td>${index + 1}</td>
-        <td style="color:${statusColor}; font-weight:bold;">${entry.plate}</td>
-        <td style="color:${statusColor}; font-weight:bold;">${entry.status}</td>
-        <td style="color:${statusColor}; font-weight:bold;">${entry.time}</td>
-        <td>${summonsColumn}</td>
-        <td>${actionButton}</td> <!-- ✅ Ensure this is added correctly -->
-    </tr>`;
-
-                                livestreamTable.innerHTML += rowHTML;
-
-                            });
+                    allPlates.forEach(plate => {
+                        allPlatesWithFlags.push({
+                            plate: plate.plate,
+                            status: plate.status,
+                            time: plate.time,
+                            isScofflaw: false,
+                            summonsNo: ""
                         });
+                    });
+
+                    let scofflawQueue = 1;
+                    summonsData.forEach(summon => {
+                        let existing = allPlatesWithFlags.find(p => p.plate === summon.plate);
+                        if (existing) {
+                            existing.status = "Scofflaw";
+                            existing.isScofflaw = true;
+                            existing.summonsNo = `${scofflawQueue++}`;
+                        } else {
+                            allPlatesWithFlags.push({
+                                plate: summon.plate,
+                                status: "Scofflaw",
+                                time: "N/A",
+                                isScofflaw: true,
+                                summonsNo: `${scofflawQueue++}`
+                            });
+                        }
+                    });
+
+                    allPlatesWithFlags.forEach((entry, index) => {
+                        let statusColor = entry.status.includes("Not Paid") ? "red" :
+                            entry.status.includes("Paid") ? "green" : "blue";
+
+                        let summonsColumn = entry.isScofflaw ? entry.summonsNo : "-";
+
+                        let actionButton = entry.isScofflaw
+                            ? `<button onclick="generatePDF('${entry.plate}')" 
+                    style="background: blue; color: white; border: none; padding: 5px; cursor: pointer;">
+                    Download PDF
+                  </button>`
+                            : "-";
+
+                        let rowHTML = `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td style="color:${statusColor}; font-weight:bold;">${entry.plate}</td>
+                    <td style="color:${statusColor}; font-weight:bold;">${entry.status}</td>
+                    <td style="color:${statusColor}; font-weight:bold;">${entry.time}</td>
+                    <td>${summonsColumn}</td>
+                    <td>${actionButton}</td>
+                </tr>`;
+                        livestreamTable.innerHTML += rowHTML;
+                    });
+                })
+                .catch(error => {
+                    console.error("❌ Error fetching plates:", error);
                 });
         }
-
 
         window.generatePDF = function (plateNumber) {
             console.log(`📥 Generating PDF for plate: ${plateNumber}`);

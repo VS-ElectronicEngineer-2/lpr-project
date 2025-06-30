@@ -10,8 +10,8 @@ app = Flask(__name__, static_url_path='/static')
 def get_db():
     return pymysql.connect(
         host="localhost",
-        user="root",
-        password="hananrazi",
+        user="lpr_user",
+        password="vistasummerose",
         database="lpr_system",
         autocommit=True,
         cursorclass=pymysql.cursors.DictCursor

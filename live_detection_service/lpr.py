@@ -56,8 +56,8 @@ def save_offline(data):
 # ✅ MariaDB connection
 db = pymysql.connect(
     host="localhost",
-    user="root",                 # Or your DB user
-    password="hananrazi",     # Replace with your actual MariaDB password
+    user="lpr_user",                 # Or your DB user
+    password="vistasummerose",     # Replace with your actual MariaDB password
     database="lpr_system"
 )
 cursor = db.cursor()
@@ -373,7 +373,8 @@ def send_plate_to_dashboard(plate_info):
 
     dashboard_urls = [
         "http://52.163.74.67:5002/api/receive-plate",
-        "http://192.168.8.108:5002/api/receive-plate"
+        "http://192.168.8.108:5002/api/receive-plate",
+        "http://192.168.8.108:5001/api/receive-plate"
     ]
     for url in dashboard_urls:
         try:
@@ -775,8 +776,8 @@ def reset_queue():
             # 1. Truncate DB table (faster than DELETE)
             connection = pymysql.connect(
                 host='localhost',
-                user='root',
-                password='hananrazi',
+                user='lpr_user',
+                password='vistasummerose',
                 database='lpr_system',
                 cursorclass=pymysql.cursors.DictCursor
             )
@@ -808,6 +809,17 @@ def reset_queue():
 @app.route("/api/status", methods=["GET"])
 def api_status():
     return jsonify({"status": "online" if is_connected() else "offline"})
+
+@app.route("/api/receive-plate", methods=["POST"])
+def receive_plate():
+    data = request.json
+    if not data or "plate" not in data:
+        return jsonify({"error": "Invalid data"}), 400
+
+    with lock:
+        detected_plates.append(data)
+    print(f"📥 Plate received via API: {data}")
+    return jsonify({"message": "Plate received"}), 200
 
 def sync_offline_data():
     if not is_connected():

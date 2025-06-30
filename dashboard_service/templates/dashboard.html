@@ -1227,7 +1227,7 @@
                                     const amount = summons.length > 0 ? summons[0].amount : "-";
 
                                     let colorClass = "";
-                                    if (summons.length > 0) {
+                                    if (status.toLowerCase().includes("scofflaw")) {
                                         colorClass = "color-scofflaw";
                                     } else if (status.toLowerCase().includes("not paid")) {
                                         colorClass = "color-not-paid";
