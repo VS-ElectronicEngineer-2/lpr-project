@@ -2198,5 +2198,149 @@
         "start_time": "2025-06-30 09:37:01",
         "idle_time": "2025-06-30 09:37:01",
         "end_time": null
+    },
+    {
+        "latitude": 3.207600027,
+        "longitude": 101.780151781,
+        "speed": 0.06,
+        "start_time": "2025-07-07 11:34:12",
+        "idle_time": "2025-07-07 11:34:12",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207600027,
+        "longitude": 101.780151781,
+        "speed": 0.06,
+        "start_time": "2025-07-07 11:34:12",
+        "idle_time": "2025-07-07 11:34:12",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207599049,
+        "longitude": 101.780181366,
+        "speed": 0.44,
+        "start_time": "2025-07-08 15:43:28",
+        "idle_time": "2025-07-08 15:43:28",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207599049,
+        "longitude": 101.780181366,
+        "speed": 0.44,
+        "start_time": "2025-07-08 15:43:28",
+        "idle_time": "2025-07-08 15:43:28",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207599049,
+        "longitude": 101.780181366,
+        "speed": 0.44,
+        "start_time": "2025-07-08 15:43:28",
+        "idle_time": "2025-07-08 15:43:28",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207591375,
+        "longitude": 101.780134917,
+        "speed": 0.01,
+        "start_time": "2025-07-08 15:54:39",
+        "idle_time": "2025-07-08 15:54:39",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207591375,
+        "longitude": 101.780134917,
+        "speed": 0.01,
+        "start_time": "2025-07-08 15:54:39",
+        "idle_time": "2025-07-08 15:54:39",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207591375,
+        "longitude": 101.780134917,
+        "speed": 0.01,
+        "start_time": "2025-07-08 15:54:39",
+        "idle_time": "2025-07-08 15:54:39",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207607087,
+        "longitude": 101.780176568,
+        "speed": 0.17,
+        "start_time": "2025-07-08 16:04:35",
+        "idle_time": "2025-07-08 16:04:35",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207607087,
+        "longitude": 101.780176568,
+        "speed": 0.17,
+        "start_time": "2025-07-08 16:04:35",
+        "idle_time": "2025-07-08 16:04:35",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207446799,
+        "longitude": 101.780136585,
+        "speed": 0.8,
+        "start_time": "2025-07-09 09:24:16",
+        "idle_time": "2025-07-09 09:24:16",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207481145,
+        "longitude": 101.780045059,
+        "speed": 0.04,
+        "start_time": "2025-07-09 09:27:32",
+        "idle_time": "2025-07-09 09:27:32",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207481145,
+        "longitude": 101.780045059,
+        "speed": 0.04,
+        "start_time": "2025-07-09 09:27:32",
+        "idle_time": "2025-07-09 09:27:32",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207466013,
+        "longitude": 101.780116311,
+        "speed": 0.43,
+        "start_time": "2025-07-09 09:30:11",
+        "idle_time": "2025-07-09 09:30:11",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207466013,
+        "longitude": 101.780116311,
+        "speed": 0.43,
+        "start_time": "2025-07-09 09:30:11",
+        "idle_time": "2025-07-09 09:30:11",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207554739,
+        "longitude": 101.780056361,
+        "speed": 0.32,
+        "start_time": "2025-07-09 09:49:24",
+        "idle_time": "2025-07-09 09:49:24",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207554739,
+        "longitude": 101.780056361,
+        "speed": 0.32,
+        "start_time": "2025-07-09 09:49:24",
+        "idle_time": "2025-07-09 09:49:24",
+        "end_time": null
+    },
+    {
+        "latitude": 3.207554739,
+        "longitude": 101.780056361,
+        "speed": 0.32,
+        "start_time": "2025-07-09 09:49:24",
+        "idle_time": "2025-07-09 09:49:24",
+        "end_time": null
     }
 ]

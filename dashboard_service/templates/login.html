@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Login | LPR Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(-45deg, #0f2027, #203a43, #2c5364, #1b2735);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .login-wrapper {
+            display: flex;
+            width: 850px;
+            max-width: 90%;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(15px);
+            border-radius: 18px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .login-left {
+            width: 45%;
+            background-color: rgba(0, 0, 0, 0.75);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .login-left h2 {
+            font-size: 32px;
+            margin-bottom: 10px;
+            letter-spacing: 1px;
+        }
+
+        .login-left p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .login-right {
+            width: 55%;
+            background-color: #fdfdfd;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .login-right h3 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 20px;
+            color: #031d67;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        input {
+            padding: 14px;
+            margin-bottom: 18px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 15px;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        input:focus {
+            border-color: #031d67;
+            box-shadow: 0 0 5px rgba(3, 29, 103, 0.4);
+            outline: none;
+        }
+
+        button {
+            padding: 14px;
+            background: linear-gradient(to right, #031d67, #0056b3);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            letter-spacing: 1px;
+            transition: background 0.3s ease;
+        }
+
+        button:hover {
+            background: linear-gradient(to right, #0056b3, #031d67);
+        }
+
+        .error-message {
+            color: red;
+            font-size: 14px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 15px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 13px;
+            opacity: 0.7;
+        }
+
+        /* Optional logo */
+        .login-left img {
+            width: 70px;
+            margin-bottom: 15px;
+            filter: drop-shadow(0px 0px 5px rgba(255, 255, 255, 0.2));
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="login-wrapper">
+        <div class="login-left">
+            <!-- Optional Logo (optional, remove if not used) -->
+            <!-- <img src="{{ url_for('static', filename='lpr-icon.png') }}" alt="LPR Logo"> -->
+
+            <h2>LPR Dashboard</h2>
+            <p>Effortless License Plate Recognition<br>at Your Fingertips</p>
+        </div>
+
+        <div class="login-right">
+            <h3>LOGIN</h3>
+            <form method="POST" action="/login">
+                <input type="text" name="username" placeholder="Username" required>
+                <input type="password" name="password" placeholder="Password" required>
+                <button type="submit">LOGIN</button>
+
+                {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                <div class="error-message">{{ messages[0] }}</div>
+                {% endif %}
+                {% endwith %}
+            </form>
+        </div>
+    </div>
+
+    <div class="footer">© 2025 Vista Summerose</div>
+</body>
+
+</html>

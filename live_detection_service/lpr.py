@@ -54,23 +54,17 @@ def save_offline(data):
         json.dump(offline_data, f, indent=2)
 
 # ✅ MariaDB connection
-db = pymysql.connect(
-    host="localhost",
-    user="lpr_user",                 # Or your DB user
-    password="vistasummerose",     # Replace with your actual MariaDB password
-    database="lpr_system"
-)
-cursor = db.cursor()
+def get_db():
+    return pymysql.connect(
+        host="localhost",
+        user="lpr_user",
+        password="vistasummerose",
+        database="lpr_system",
+        cursorclass=pymysql.cursors.DictCursor  # Important for dict-style access
+    )
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"  # Change this to a secure key
-
-# ✅ Dummy User Database (Replace with actual database in production)
-USERS = {
-    "admin": {"password": "password123", "officer_id": "111111"},
-    "user1": {"password": "lprsystem", "officer_id": "222222"},
-    "user2": {"password": "test123", "officer_id": "333333"}
-}
 
 app.config["SNAPSHOT_FOLDER"] = "static/snapshots"
 if not os.path.exists(app.config["SNAPSHOT_FOLDER"]):
@@ -80,7 +74,7 @@ if not os.path.exists(app.config["SNAPSHOT_FOLDER"]):
 PLATE_RECOGNIZER_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
 PARKING_API_URL = "https://mycouncil.citycarpark.my/parking/ctcp/services-listerner_mbk.php"
 NODE_API_URL = "http://localhost:5000/api/summons"
-API_TOKEN = "7a5650fef8c594f93549eb9dea557d1bcbf1b42e"
+API_TOKEN = "31dec082ba6a3f72b16236de19f32d1559d743c9"
 PARKING_API_ACTION = "GetParkingRightByPlateVerify"
 
 detected_plates = []
@@ -165,31 +159,45 @@ def send_gps_to_dashboard(data):
 @app.route("/login", methods=["GET", "POST"])
 def login():
     global stored_officer_id
+
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
 
-        if username in USERS and USERS[username]["password"] == password:
-            session["user"] = username
-            session["officer_id"] = USERS[username]["officer_id"]
-            stored_officer_id = USERS[username]["officer_id"]  # ✅ Store globally
-            return redirect("/")
+        conn = get_db()
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+                user = cursor.fetchone()
+
+                # ✅ DEBUG PRINTS (inside the try block)
+                print(f"🧪 Trying login: username={username}, password={password}")
+                print(f"🧪 DB user found: {user}")
+
+        finally:
+            conn.close()
+
+        if user and password == user["password"]:
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
+            session["officer_id"] = user["officer_id"]
+            stored_officer_id = user["officer_id"]  # Store globally for detection
+            return redirect(url_for("dashboard"))
         else:
-            return render_template("login.html", error="Invalid username or password.")
+            return render_template("login.html", error="Invalid login credentials.")
 
     return render_template("login.html")
 
-@app.route("/logout")  # ✅ Ensure logout function is correctly defined
+@app.route("/logout")
 def logout():
     global stored_officer_id
-    session.pop("user", None)
-    session.pop("officer_id", None)
-    stored_officer_id = "Unknown"  # ✅ Reset on logout
-    return redirect("/login")
+    session.clear()
+    stored_officer_id = "Unknown"
+    return redirect(url_for("login"))
 
 @app.route("/")
 def dashboard():
-    if "user" not in session:  # ✅ If user is not logged in, redirect to login page
+    if "user_id" not in session:  # ✅ If user is not logged in, redirect to login page
         return redirect(url_for("login"))
     return render_template("index.html")  # ✅ If logged in, show the dashboard
 
@@ -372,21 +380,19 @@ def send_plate_to_dashboard(plate_info):
         return
 
     dashboard_urls = [
-        "http://52.163.74.67:5002/api/receive-plate",
+        "http://192.168.8.108:5001/api/receive-plate",
         "http://192.168.8.108:5002/api/receive-plate",
-        "http://192.168.8.108:5001/api/receive-plate"
+        "http://52.163.74.67:5002/api/receive-plate",
+        "http://52.163.74.67:5001/api/receive-plate"
     ]
+    
     for url in dashboard_urls:
         try:
+            print(f"🔁 Sending plate {plate_info['plate']} to {url}")
             response = requests.post(url, json=plate_info, timeout=5)
-            if response.status_code == 200:
-                print(f"📤 Sent plate to dashboard: {url}")
-                return
+            print(f"📤 Response from {url}: {response.status_code}")
         except Exception as e:
-            print(f"❌ Failed to send plate to {url}: {e}")
-
-    print("📦 Saving plate to offline queue (all URLs failed)")
-    save_offline({"type": "plate", "data": plate_info})
+            print(f"❌ Failed to send to {url}: {e}")
 
 threading.Thread(target=process_frames, daemon=True).start()
 
@@ -648,6 +654,8 @@ def receive_gps():
         gps_logs.append(data)
 
         try:
+            db = get_db()
+            cursor = db.cursor()
             cursor.execute("""
                 INSERT INTO gps_history (plate, timestamp, latitude, longitude, speed)
                 VALUES (%s, %s, %s, %s, %s)
@@ -659,6 +667,7 @@ def receive_gps():
                 data.get("speed", 0)
             ))
             db.commit()
+            cursor.close()
             print("✅ GPS saved to DB")
         except Exception as e:
             print("❌ Failed to insert GPS into DB:", e)

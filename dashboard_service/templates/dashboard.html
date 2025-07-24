@@ -398,6 +398,20 @@
     <!-- 🔹 Top Bar -->
     <div class="topbar">
         <h1>License Plate Recognition Dashboard</h1>
+
+        <!-- Profile Dropdown -->
+        <div class="profile-container" onclick="toggleDropdown()" style="margin-left: auto; position: relative;">
+            <div class="profile-icon"
+                style="width: 40px; height: 40px; background-color: #031d67; color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; cursor: pointer;">
+                HM
+            </div>
+            <div id="dropdown-menu"
+                style="position: absolute; right: 0; top: 45px; background: white; border: 1px solid #ccc; border-radius: 6px; display: none; z-index: 999; min-width: 160px;">
+                <div style="padding: 10px; cursor: pointer;" onclick="alert('Account Settings')">⚙️ Account Settings
+                </div>
+                <div style="padding: 10px; cursor: pointer;" onclick="logout()">🔓 Logout</div>
+            </div>
+        </div>
     </div>
 
     <!-- Main Content -->
@@ -1007,7 +1021,7 @@
                     });
 
                     let playbackData = [];
-                    let playbackIndex = 0;
+                    let playbackIndex = 0; below
                     let playbackInterval = null;
                     let playbackMarker = null;
                     let playbackPolyline = null;
@@ -1256,6 +1270,26 @@
                         setInterval(updateTracking, 5000);
                         showTrackingTab("live");
                     };
+
+                    // 🔄 Dropdown toggle logic
+                    function toggleDropdown() {
+                        const menu = document.getElementById("dropdown-menu");
+                        menu.style.display = menu.style.display === "block" ? "none" : "block";
+                    }
+
+                    // ✅ Logout handler
+                    function logout() {
+                        window.location.href = "/logout"; // Or your actual logout endpoint
+                    }
+
+                    // ⛔ Close dropdown if user clicks outside
+                    window.addEventListener("click", function (event) {
+                        const dropdown = document.getElementById("dropdown-menu");
+                        const profileContainer = document.querySelector(".profile-container");
+                        if (dropdown && profileContainer && !profileContainer.contains(event.target)) {
+                            dropdown.style.display = "none";
+                        }
+                    });
 
                 </script>
 

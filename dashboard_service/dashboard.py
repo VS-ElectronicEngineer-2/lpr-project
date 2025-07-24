@@ -1,8 +1,9 @@
-from flask import Flask, jsonify, request, render_template
+from flask import Flask, jsonify, request, render_template, redirect, url_for, session, flash
 from datetime import datetime
 import pymysql
 
 app = Flask(__name__, static_url_path='/static')
+app.secret_key = 'your_secret_key'  # Change to a strong secret key
 
 # ========================
 # 🔹 MySQL Connection Helper
@@ -18,11 +19,43 @@ def get_db():
     )
 
 # ========================
+# 🔹 Login & Logout
+# ========================
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form["username"]
+        password = request.form["password"]
+
+        conn = get_db()
+        with conn.cursor() as cursor:
+            cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+            user = cursor.fetchone()
+        conn.close()
+
+        if user and password == user["password"]:
+            session["user_id"] = user["id"]
+            session["username"] = user["username"]
+            return redirect(url_for("index"))
+        else:
+            flash("Invalid login credentials.")
+            return redirect(url_for("login"))
+
+    return render_template("login.html")
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
+# ========================
 # 🔹 Web Pages
 # ========================
 @app.route("/")
 def index():
-    return render_template("dashboard.html")
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+    return render_template("dashboard.html", username=session["username"])
 
 # ========================
 # 🔹 GPS API
@@ -31,12 +64,18 @@ GPS_LOGS = []
 
 @app.route("/gps-tracking")
 def gps_tracking():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
     if GPS_LOGS:
         return jsonify(GPS_LOGS[-1])
     return jsonify({"error": "No GPS data"}), 404
 
 @app.route("/gps-tracking-history")
 def gps_tracking_history():
+    if "user_id" not in session:
+        return redirect(url_for("login"))
+
     plate = request.args.get("plate")
     start = request.args.get("start")
     end = request.args.get("end")
@@ -44,7 +83,6 @@ def gps_tracking_history():
     if not plate or not start or not end:
         return jsonify({"error": "Missing parameters"}), 400
 
-    # 🔧 Add full-day range to include all times on selected dates
     start_datetime = f"{start} 00:00:00"
     end_datetime = f"{end} 23:59:59"
 
@@ -55,7 +93,7 @@ def gps_tracking_history():
                 SELECT * FROM gps_logs
                 WHERE plate = %s AND time BETWEEN %s AND %s
                 ORDER BY time ASC
-            """, (plate.upper(), start_datetime, end_datetime))  # 🔁 Use .upper() for consistency
+            """, (plate.upper(), start_datetime, end_datetime))
             results = cursor.fetchall()
         conn.close()
         return jsonify(results)
@@ -65,18 +103,16 @@ def gps_tracking_history():
 
 @app.route("/api/gps", methods=["POST"])
 def receive_gps():
-    global GPS_LOGS  # ✅ Add this line
+    global GPS_LOGS
     data = request.json
     if data:
         data["plate"] = "VMD9454"
         data["time"] = data.get("time") or datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # ✅ In-memory (for /gps-tracking)
         GPS_LOGS.append(data)
         if len(GPS_LOGS) > 1000:
             GPS_LOGS = GPS_LOGS[-1000:]
 
-        # ✅ Save to MariaDB
         try:
             conn = get_db()
             with conn.cursor() as cursor:
@@ -139,6 +175,9 @@ def receive_plate():
 
 @app.route("/api/received-plates", methods=["GET"])
 def get_received_plates():
+    if "user_id" not in session:
+        return jsonify({"error": "Unauthorized"}), 401
+
     start = request.args.get("start")
     end = request.args.get("end")
 
@@ -159,10 +198,7 @@ def get_received_plates():
         plates = []
         for row in rows:
             time_value = row["time"]
-            if isinstance(time_value, str):
-                formatted_time = time_value
-            else:
-                formatted_time = time_value.strftime("%Y-%m-%d %H:%M:%S")
+            formatted_time = time_value if isinstance(time_value, str) else time_value.strftime("%Y-%m-%d %H:%M:%S")
 
             plates.append({
                 "plate": row["plate"],
