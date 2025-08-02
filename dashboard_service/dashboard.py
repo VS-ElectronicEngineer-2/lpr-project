@@ -74,7 +74,7 @@ def gps_tracking():
 @app.route("/gps-tracking-history")
 def gps_tracking_history():
     if "user_id" not in session:
-        return redirect(url_for("login"))
+        return jsonify({"error": "Unauthorized"}), 401
 
     plate = request.args.get("plate")
     start = request.args.get("start")
@@ -83,19 +83,26 @@ def gps_tracking_history():
     if not plate or not start or not end:
         return jsonify({"error": "Missing parameters"}), 400
 
-    start_datetime = f"{start} 00:00:00"
-    end_datetime = f"{end} 23:59:59"
-
     try:
+        # ✅ Handle DD/MM/YYYY format
+        if "/" in start:
+            start = datetime.strptime(start, "%d/%m/%Y").strftime("%Y-%m-%d")
+            end = datetime.strptime(end, "%d/%m/%Y").strftime("%Y-%m-%d")
+
+        start_datetime = f"{start} 00:00:00"
+        end_datetime = f"{end} 23:59:59"
+
         conn = get_db()
         with conn.cursor() as cursor:
             cursor.execute("""
-                SELECT * FROM gps_logs
-                WHERE plate = %s AND time BETWEEN %s AND %s
+                SELECT plate, latitude, longitude, speed, time AS timestamp
+                FROM gps_logs
+                WHERE UPPER(plate) = UPPER(%s) AND time BETWEEN %s AND %s
                 ORDER BY time ASC
-            """, (plate.upper(), start_datetime, end_datetime))
+            """, (plate, start_datetime, end_datetime))
             results = cursor.fetchall()
         conn.close()
+
         return jsonify(results)
     except Exception as e:
         print("❌ Error fetching GPS history:", e)

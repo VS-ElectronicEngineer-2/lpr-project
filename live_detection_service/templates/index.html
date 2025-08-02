@@ -197,8 +197,8 @@
             </div>
 
             <div class="controls">
-                <button class="btn start" onclick="startLiveStream()">Start</button>
-                <button class="btn stop" onclick="stopLiveStream()">Stop</button>
+                <button class="btn start" onclick="startAllServices()">Start All Services</button>
+                <button class="btn stop" onclick="stopAllServices()">Stop All Services</button>
                 <button class="btn reset" onclick="resetSystem()">Reset Queue</button>
             </div>
         </div>
@@ -243,6 +243,37 @@
                         fetchData(); // Reload updated data
                     });
             }
+        }
+        function startAllServices() {
+            Promise.all([
+                // Start Pi2 local services
+                fetch('/start-all', { method: 'POST' }),
+                // Start Pi1 services (remote)
+                fetch('http://192.168.8.141:5001/start-all', { method: 'POST' })
+            ])
+                .then(async responses => {
+                    const results = await Promise.all(responses.map(res => res.json()));
+                    alert(`✅ Pi2: ${results[0].message}\n✅ Pi1: ${results[1].message}`);
+                })
+                .catch(error => {
+                    console.error("❌ Error starting services:", error);
+                });
+        }
+
+        function stopAllServices() {
+            Promise.all([
+                // Stop Pi2 local services
+                fetch('/stop-all', { method: 'POST' }),
+                // Stop Pi1 services (remote)
+                fetch('http://192.168.8.141:5001/stop-all', { method: 'POST' })
+            ])
+                .then(async responses => {
+                    const results = await Promise.all(responses.map(res => res.json()));
+                    alert(`🛑 Pi2: ${results[0].message}\n🛑 Pi1: ${results[1].message}`);
+                })
+                .catch(error => {
+                    console.error("❌ Error stopping services:", error);
+                });
         }
 
         function fetchData() {

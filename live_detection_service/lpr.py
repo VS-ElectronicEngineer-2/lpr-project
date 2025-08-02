@@ -27,6 +27,7 @@ import shutil
 import socket
 from pathlib import Path
 import json
+import subprocess
 
 OFFLINE_FILE = "offline_queue.json"
 
@@ -74,7 +75,7 @@ if not os.path.exists(app.config["SNAPSHOT_FOLDER"]):
 PLATE_RECOGNIZER_API_URL = "https://api.platerecognizer.com/v1/plate-reader/"
 PARKING_API_URL = "https://mycouncil.citycarpark.my/parking/ctcp/services-listerner_mbk.php"
 NODE_API_URL = "http://localhost:5000/api/summons"
-API_TOKEN = "31dec082ba6a3f72b16236de19f32d1559d743c9"
+API_TOKEN = "7a5650fef8c594f93549eb9dea557d1bcbf1b42e"
 PARKING_API_ACTION = "GetParkingRightByPlateVerify"
 
 detected_plates = []
@@ -121,6 +122,22 @@ def is_duplicate_plate(plate, cooldown=10):
         return True
     recent_plates[plate] = now
     return False
+
+def get_gps_coordinates(timeout=1):
+    try:
+        session = gps.gps(mode=gps.WATCH_ENABLE)
+        start_time = time.time()
+        while time.time() - start_time < timeout:
+            report = session.next()
+            if report['class'] == 'TPV':
+                lat = getattr(report, 'lat', None)
+                lon = getattr(report, 'lon', None)
+                if lat is not None and lon is not None:
+                    return round(lat, 6), round(lon, 6)
+        print("⚠️ GPS not ready within timeout.")
+    except Exception as e:
+        print(f"GPS Error: {e}")
+    return None, None
 
 # Initialize camera
 try:
@@ -302,11 +319,10 @@ def process_frames():
                 snapshot_path = os.path.join(app.config["SNAPSHOT_FOLDER"], snapshot_name)
                 cv2.imwrite(snapshot_path, frame)
 
-                latitude, longitude = None, None
-                if gps_logs:
-                    latest_gps = gps_logs[-1]
-                    latitude = latest_gps.get("latitude")
-                    longitude = latest_gps.get("longitude")
+                # ✅ Get real-time GPS for this detection
+                latitude, longitude = get_gps_coordinates()
+                if not latitude or not longitude:
+                    print("⚠️ GPS not ready, setting None.")
 
                 officer_id = stored_officer_id
 
@@ -872,6 +888,33 @@ def start_sync_loop():
 
 # Start offline sync loop
 start_sync_loop()
+
+@app.route('/start-all', methods=['POST'])
+def start_all_services():
+    try:
+        subprocess.Popen(['python3', '/home/pi/lpr-project/live_detection_service/lpr.py'],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(['node', '/home/pi/lpr-project/live_detection_service/server.js'],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(['python3', '/home/pi/lpr-project/live_detection_service/gps_tracker.py'],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.Popen(['python3', '/home/pi/lpr-project/dashboard_service/dashboard.py'],
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        return jsonify({"message": "✅ All services started successfully!"})
+    except Exception as e:
+        return jsonify({"message": f"❌ Error starting services: {e}"}), 500
+
+@app.route('/stop-all', methods=['POST'])
+def stop_all_services():
+    try:
+        os.system("pkill -f lpr.py")
+        os.system("pkill -f server.js")
+        os.system("pkill -f gps_tracker.py")
+        os.system("pkill -f dashboard.py")
+        return jsonify({"message": "✅ All services stopped successfully!"})
+    except Exception as e:
+        return jsonify({"message": f"❌ Error stopping services: {e}"}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=False)

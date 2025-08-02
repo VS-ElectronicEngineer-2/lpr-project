@@ -592,20 +592,13 @@
 
                     // ✅ Initialize Tracking Map
                     function initTrackingMap() {
-                        let trackingMapDiv = document.getElementById("trackingMap");
-
-                        if (!trackingMapDiv) {
-                            console.error("🚨 Tracking Map div not found!");
-                            return;
-                        }
-
-                        trackingMap = new google.maps.Map(trackingMapDiv, {
-                            center: { lat: 3.139, lng: 101.6869 }, // Default Kuala Lumpur
-                            zoom: 13,
-                            mapTypeId: "roadmap"
+                        trackingMap = new google.maps.Map(document.getElementById("liveTrackingMap"), {
+                            center: { lat: 3.139, lng: 101.6869 }, zoom: 13
+                        });
+                        historicalTrackingMap = new google.maps.Map(document.getElementById("historicalTrackingMap"), {
+                            center: { lat: 3.139, lng: 101.6869 }, zoom: 13
                         });
                     }
-
 
                     // 🔹 STEP 3: Ensure the Map Updates When Displayed
                     function updateMap() {
@@ -856,58 +849,79 @@
                         });
                     }
 
+                    let trackingPolyline = null;
+                    let liveMarkers = []; // Store breadcrumb markers
 
                     function updateTracking() {
                         fetch("/gps-tracking")
                             .then(response => response.json())
                             .then(data => {
                                 if (!data.latitude || !data.longitude || !trackingMap) {
-                                    console.warn("⚠️ Invalid GPS data or trackingMap not ready.");
+                                    console.warn("⚠️ Invalid GPS data or map not ready.");
                                     return;
                                 }
 
                                 const { latitude, longitude, speed, start_time } = data;
-                                const position = { lat: latitude, lng: longitude };
+                                const position = { lat: parseFloat(latitude), lng: parseFloat(longitude) };
 
-                                console.log("📡 New GPS:", data);
+                                console.log("📡 Live GPS:", position);
 
-                                // Update tracking path
-                                trackingPath.push(position);
+                                // ✅ Add current position to tracking path
+                                if (!trackingPolyline) {
+                                    trackingPolyline = new google.maps.Polyline({
+                                        path: [position],
+                                        geodesic: true,
+                                        strokeColor: "#0000FF", // Blue polyline
+                                        strokeOpacity: 1.0,
+                                        strokeWeight: 4,
+                                        map: trackingMap
+                                    });
+                                } else {
+                                    const path = trackingPolyline.getPath();
+                                    const lastIndex = path.getLength() - 1;
+                                    if (lastIndex < 0 || position.lat !== path.getAt(lastIndex).lat() || position.lng !== path.getAt(lastIndex).lng()) {
+                                        path.push(position);
+                                    }
+                                }
 
-                                // Update or create marker
+                                // ✅ Main marker for current position (Blue)
                                 if (!vehicleMarker) {
                                     vehicleMarker = new google.maps.Marker({
                                         position,
                                         map: trackingMap,
-                                        title: "Vehicle Location",
-                                        icon: {
-                                            url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png"
-                                        }
+                                        title: "Current Vehicle Location",
+                                        icon: { url: "http://maps.google.com/mapfiles/ms/icons/blue-dot.png" }
                                     });
                                 } else {
                                     vehicleMarker.setPosition(position);
                                 }
 
-                                // Draw polyline path
-                                const trackingPolyline = new google.maps.Polyline({
-                                    path: trackingPath,
-                                    geodesic: true,
-                                    strokeColor: "#0000FF",
-                                    strokeOpacity: 1.0,
-                                    strokeWeight: 3
+                                // ✅ Breadcrumb marker (small circle)
+                                const breadcrumbMarker = new google.maps.Marker({
+                                    position,
+                                    map: trackingMap,
+                                    icon: {
+                                        path: google.maps.SymbolPath.CIRCLE,
+                                        scale: 4,
+                                        fillColor: "#0000FF",
+                                        fillOpacity: 1,
+                                        strokeWeight: 0
+                                    }
                                 });
-                                trackingPolyline.setMap(trackingMap);
+                                liveMarkers.push(breadcrumbMarker);
 
-                                // Show in table with status
+                                // ✅ Auto-center on latest position
+                                trackingMap.panTo(position);
+
+                                // ✅ Update live tracking table
                                 const statusText = speed < 5 ? "🟡 Idle" : "🟢 Moving";
-
-                                const row = `<tr>
-                <td>${start_time}</td>
-                <td>${latitude.toFixed(6)}</td>
-                <td>${longitude.toFixed(6)}</td>
-                <td>${speed} km/h - ${statusText}</td>
-            </tr>`;
-
+                                const row = `
+                <tr>
+                    <td>${start_time}</td>
+                    <td>${latitude.toFixed(6)}</td>
+                    <td>${longitude.toFixed(6)}</td>
+                    <td>${speed} km/h - ${statusText}</td>
+                </tr>`;
                                 document.getElementById("liveTrackingTable").innerHTML += row;
                             })
                             .catch(err => console.error("❌ Error fetching GPS:", err));
@@ -922,9 +936,9 @@
                     }
 
                     function searchTrackingData() {
-                        let plateNumber = document.getElementById("plateSearch").value.trim();
-                        let start = document.getElementById("startDate").value;
-                        let end = document.getElementById("endDate").value;
+                        const plateNumber = document.getElementById("plateSearch").value.trim();
+                        const start = document.getElementById("startDate").value;
+                        const end = document.getElementById("endDate").value;
 
                         if (!plateNumber) {
                             alert("Please enter a plate number.");
@@ -936,29 +950,41 @@
                             return;
                         }
 
-                        fetch(`/gps-tracking-history?plate=${plateNumber}&start=${start}&end=${end}`)
+                        fetch(`/gps-tracking-history?plate=${encodeURIComponent(plateNumber)}&start=${start}&end=${end}`)
                             .then(response => response.json())
                             .then(data => {
-                                if (data.length === 0) {
+                                console.log("✅ Raw API Data:", data);
+
+                                if (!Array.isArray(data) || data.length === 0) {
                                     alert("No tracking data found for this plate number.");
                                     return;
                                 }
 
-                                // ✅ Store data only for playback
+                                // ✅ Convert data for playback
                                 playbackData = data.map(entry => ({
-                                    lat: entry.latitude,
-                                    lng: entry.longitude,
-                                    speed: entry.speed,
-                                    time: entry.time
-                                }));
+                                    lat: parseFloat(entry.latitude),
+                                    lng: parseFloat(entry.longitude),
+                                    speed: parseFloat(entry.speed || 0),
+                                    time: entry.timestamp
+                                })).filter(p => !isNaN(p.lat) && !isNaN(p.lng));
 
-                                // ❌ DO NOT RENDER MAP OR TABLE YET
-                                document.getElementById("historicalTrackingTable").innerHTML = ""; // Optional: clear previous
-                                document.getElementById("idleTableBody").innerHTML = ""; // Clear idle table too
+                                console.log("✅ Valid Playback Data:", playbackData);
 
-                                alert("Data loaded! Click ▶️ Play to start playback.");
+                                if (playbackData.length === 0) {
+                                    alert("❌ All points were invalid. Check API data.");
+                                    return;
+                                }
+
+                                alert(`✅ Loaded ${playbackData.length} valid points! Click ▶️ Play to start.`);
+
+                                // ✅ Auto-switch to history tab
+                                showTrackingTab("history");
+                                google.maps.event.trigger(historicalTrackingMap, "resize");
                             })
-                            .catch(error => console.error("Error fetching tracking data:", error));
+                            .catch(error => {
+                                console.error("❌ Error fetching tracking data:", error);
+                                alert("Failed to load tracking data.");
+                            });
                     }
 
                     // ✅ Update clearTrackingSearch() for Google Maps:
@@ -977,16 +1003,13 @@
                     }
 
                     function showTrackingTab(type) {
-                        const liveTab = document.getElementById("liveTrackingTab");
-                        const historyTab = document.getElementById("historicalTrackingTab");
+                        document.getElementById("liveTrackingTab").style.display = (type === 'live') ? 'block' : 'none';
+                        document.getElementById("historicalTrackingTab").style.display = (type === 'history') ? 'block' : 'none';
 
-                        if (type === 'live') {
-                            liveTab.style.display = 'block';
-                            historyTab.style.display = 'none';
-                        } else {
-                            liveTab.style.display = 'none';
-                            historyTab.style.display = 'block';
-                        }
+                        // ✅ Force Google Maps to refresh when tab becomes visible
+                        setTimeout(() => {
+                            google.maps.event.trigger(type === 'live' ? trackingMap : historicalTrackingMap, "resize");
+                        }, 300);
                     }
 
                     window.onload = function () {
@@ -1021,7 +1044,7 @@
                     });
 
                     let playbackData = [];
-                    let playbackIndex = 0; below
+                    let playbackIndex = 0;
                     let playbackInterval = null;
                     let playbackMarker = null;
                     let playbackPolyline = null;
@@ -1052,116 +1075,66 @@
                     let idleEntries = [];
 
                     function startPlayback(speed = 1000) {
-                        console.log("▶️ Starting Playback with data:", playbackData);
-
-                        if (!playbackData || !playbackData.length) {
+                        if (!playbackData.length) {
                             alert("❌ No data available. Please search first.");
                             return;
                         }
 
-                        if (playbackInterval) clearInterval(playbackInterval);
+                        console.log("▶️ Start Playback with", playbackData.length, "points");
+
+                        // Reset previous playback
+                        clearInterval(playbackInterval);
                         if (playbackMarker) playbackMarker.setMap(null);
                         if (playbackPath) playbackPath.setMap(null);
 
                         playbackIndex = 0;
                         isPaused = false;
 
-                        // Create the playback marker
+                        const firstPoint = playbackData[0];
+                        historicalTrackingMap.setCenter(firstPoint);
+                        historicalTrackingMap.setZoom(16);
+
+                        // Create marker and path
                         playbackMarker = new google.maps.Marker({
-                            position: { lat: playbackData[0].lat, lng: playbackData[0].lng },
+                            position: firstPoint,
                             map: historicalTrackingMap,
-                            title: "Vehicle Playback",
-                            icon: {
-                                url: "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png"
-                            }
+                            icon: { url: "http://maps.google.com/mapfiles/ms/icons/yellow-dot.png" }
                         });
 
                         playbackPath = new google.maps.Polyline({
                             path: [],
                             geodesic: true,
-                            strokeColor: "#FFA500",
+                            strokeColor: "#FF0000",
                             strokeOpacity: 1.0,
                             strokeWeight: 4,
                             map: historicalTrackingMap
                         });
 
-                        let idleStartTime = null;
-                        let idleEndTime = null;
-                        let idleEntries = [];
+                        // Clear table
+                        const table = document.getElementById("historicalPlaybackCombinedTable");
+                        table.innerHTML = "";
 
+                        // Animate
                         playbackInterval = setInterval(() => {
                             if (isPaused || playbackIndex >= playbackData.length) {
                                 clearInterval(playbackInterval);
-
-                                // ✅ Display Detected Idle Periods
-                                const idleTable = document.getElementById("idleTableBody");
-                                idleTable.innerHTML = "";
-
-                                idleEntries.forEach(idle => {
-                                    const row = `
-                    <tr>
-                        <td>${idle.start}</td>
-                        <td>${idle.end}</td>
-                        <td>${idle.duration} sec</td>
-                    </tr>`;
-                                    idleTable.innerHTML += row;
-                                });
-
                                 return;
                             }
 
                             const current = playbackData[playbackIndex];
-                            const prev = playbackIndex > 0 ? playbackData[playbackIndex - 1] : null;
+                            playbackMarker.setPosition(current);
+                            playbackPath.getPath().push(new google.maps.LatLng(current.lat, current.lng));
+                            historicalTrackingMap.panTo(current);
 
-                            const position = { lat: current.lat, lng: current.lng };
-                            playbackMarker.setPosition(position);
-                            playbackPath.getPath().push(new google.maps.LatLng(position.lat, position.lng));
-                            historicalTrackingMap.panTo(position);
-
-                            const address = `${current.lat.toFixed(5)}, ${current.lng.toFixed(5)}`;
-                            let parkingDuration = "";
-
-                            if (current.speed < 5 && prev) {
-                                const timeDiff = new Date(current.time) - new Date(prev.time); // in ms
-
-                                if (!idleStartTime) {
-                                    idleStartTime = new Date(prev.time);
-                                }
-                                idleEndTime = new Date(current.time);
-
-                                const duration = (idleEndTime - idleStartTime) / 1000; // seconds
-                                if (duration > 10) {
-                                    parkingDuration = `${Math.floor(duration / 60)}min ${Math.round(duration % 60)}sec`;
-
-                                    idleEntries.push({
-                                        start: idleStartTime.toLocaleTimeString(),
-                                        end: idleEndTime.toLocaleTimeString(),
-                                        duration: Math.round(duration)
-                                    });
-
-                                    new google.maps.Marker({
-                                        position,
-                                        map: historicalTrackingMap,
-                                        title: `Idle (${parkingDuration})`,
-                                        icon: { url: "http://maps.google.com/mapfiles/ms/icons/orange-dot.png" }
-                                    });
-
-                                    idleStartTime = null;
-                                    idleEndTime = null;
-                                }
-                            } else {
-                                idleStartTime = null;
-                                idleEndTime = null;
-                            }
-
-                            const combinedRow = `<tr>
-    <td>${current.time}</td>
-    <td>${address}</td>
-    <td>${current.speed.toFixed(2)}</td>
-    <td>${parkingDuration}</td>
-</tr>`;
-
-                            document.getElementById("historicalPlaybackCombinedTable").innerHTML += combinedRow;
+                            // Add table row
+                            table.innerHTML += `
+            <tr>
+                <td>${current.time}</td>
+                <td>${current.lat.toFixed(5)}, ${current.lng.toFixed(5)}</td>
+                <td>${current.speed.toFixed(2)} km/h</td>
+                <td>-</td>
+            </tr>
+        `;
 
                             playbackIndex++;
                         }, speed);
