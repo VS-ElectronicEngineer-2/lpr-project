@@ -808,10 +808,12 @@
                                     }
                                 });
 
-                                if (firstValidPosition) {
+                                if (!window.mapInitialized && firstValidPosition) {
                                     dispatchMap.setCenter(firstValidPosition);
                                     dispatchMap.setZoom(14);
+                                    window.mapInitialized = true; // ✅ Only center once
                                 }
+
                             })
                             .catch(error => console.error("❌ Error fetching plates:", error));
                     }

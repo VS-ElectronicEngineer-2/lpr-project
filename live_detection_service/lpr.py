@@ -28,6 +28,7 @@ import socket
 from pathlib import Path
 import json
 import subprocess
+from threading import Thread
 
 OFFLINE_FILE = "offline_queue.json"
 
@@ -85,6 +86,8 @@ frame_queue = Queue(maxsize=1)  # Increased queue size
 gps_logs = []  # ✅ Store latest GPS readings
 stored_officer_id = "Unknown"  # ✅ Store officer ID globally
 
+latest_gps = {"latitude": None, "longitude": None, "last_update": None}  # ✅ Global GPS storage
+
 # API Logging Stats
 api_stats = {
     "success_count": 0,
@@ -123,21 +126,24 @@ def is_duplicate_plate(plate, cooldown=10):
     recent_plates[plate] = now
     return False
 
-def get_gps_coordinates(timeout=1):
+def gps_updater():
+    global latest_gps
     try:
         session = gps.gps(mode=gps.WATCH_ENABLE)
-        start_time = time.time()
-        while time.time() - start_time < timeout:
-            report = session.next()
+        for report in session:
             if report['class'] == 'TPV':
                 lat = getattr(report, 'lat', None)
                 lon = getattr(report, 'lon', None)
-                if lat is not None and lon is not None:
-                    return round(lat, 6), round(lon, 6)
-        print("⚠️ GPS not ready within timeout.")
+                if lat and lon:
+                    latest_gps["latitude"] = round(lat, 6)
+                    latest_gps["longitude"] = round(lon, 6)
+                    latest_gps["last_update"] = time.time()
+                    print(f"✅ GPS Updated: {latest_gps}")
     except Exception as e:
-        print(f"GPS Error: {e}")
-    return None, None
+        print(f"❌ GPS updater error: {e}")
+
+# Start GPS thread
+threading.Thread(target=gps_updater, daemon=True).start()
 
 # Initialize camera
 try:
@@ -319,10 +325,18 @@ def process_frames():
                 snapshot_path = os.path.join(app.config["SNAPSHOT_FOLDER"], snapshot_name)
                 cv2.imwrite(snapshot_path, frame)
 
-                # ✅ Get real-time GPS for this detection
-                latitude, longitude = get_gps_coordinates()
-                if not latitude or not longitude:
-                    print("⚠️ GPS not ready, setting None.")
+                # ✅ Use latest GPS from background thread
+                latitude = latest_gps["latitude"]
+                longitude = latest_gps["longitude"]
+
+                if latitude is None or longitude is None:
+                    print("⚠️ GPS still not ready, skipping this detection.")
+                    continue
+                
+                # ✅ Avoid duplicate GPS coordinates for consecutive detections
+                if detected_plates and detected_plates[-1]["latitude"] == latitude and detected_plates[-1]["longitude"] == longitude:
+                    print("⚠️ Same GPS as last detection, skipping.")
+                    continue
 
                 officer_id = stored_officer_id
 
@@ -389,26 +403,30 @@ def process_frames():
 
 # ✅ Helper to send data to dashboard
 
+# ✅ Helper to send data to dashboard (Async/threaded version)
 def send_plate_to_dashboard(plate_info):
-    if not is_connected():
-        print("📴 No internet, saving plate to offline queue")
-        save_offline({"type": "plate", "data": plate_info})
-        return
+    def forward():
+        if not is_connected():
+            print("📴 No internet, saving plate to offline queue")
+            save_offline({"type": "plate", "data": plate_info})
+            return
 
-    dashboard_urls = [
-        "http://192.168.8.108:5001/api/receive-plate",
-        "http://192.168.8.108:5002/api/receive-plate",
-        "http://52.163.74.67:5002/api/receive-plate",
-        "http://52.163.74.67:5001/api/receive-plate"
-    ]
-    
-    for url in dashboard_urls:
-        try:
-            print(f"🔁 Sending plate {plate_info['plate']} to {url}")
-            response = requests.post(url, json=plate_info, timeout=5)
-            print(f"📤 Response from {url}: {response.status_code}")
-        except Exception as e:
-            print(f"❌ Failed to send to {url}: {e}")
+        dashboard_urls = [
+            "http://192.168.8.108:5001/api/receive-plate",
+            "http://192.168.8.108:5002/api/receive-plate",
+            "http://52.163.74.67:5002/api/receive-plate",
+            "http://52.163.74.67:5001/api/receive-plate"
+        ]
+
+        for url in dashboard_urls:
+            try:
+                print(f"🔁 Sending plate {plate_info['plate']} to {url}")
+                response = requests.post(url, json=plate_info, timeout=5)
+                print(f"📤 Response from {url}: {response.status_code}")
+            except Exception as e:
+                print(f"❌ Failed to send to {url}: {e}")
+
+    Thread(target=forward).start()
 
 threading.Thread(target=process_frames, daemon=True).start()
 
@@ -892,13 +910,13 @@ start_sync_loop()
 @app.route('/start-all', methods=['POST'])
 def start_all_services():
     try:
-        subprocess.Popen(['python3', '/home/pi/lpr-project/live_detection_service/lpr.py'],
+        subprocess.Popen(['python3', '/home/lpr2/Desktop/lpr-project/live_detection_service/lpr.py'],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.Popen(['node', '/home/pi/lpr-project/live_detection_service/server.js'],
+        subprocess.Popen(['python3', '/home/lpr2/Desktop/lpr-project/live_detection_service/gps_tracker.py'],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.Popen(['python3', '/home/pi/lpr-project/live_detection_service/gps_tracker.py'],
+        subprocess.Popen(['node', '/home/lpr2/Desktop/lpr-project/live_detection_service/server.js'],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        subprocess.Popen(['python3', '/home/pi/lpr-project/dashboard_service/dashboard.py'],
+        subprocess.Popen(['python3', '/home/lpr2/Desktop/lpr-project/dashboard_service/dashboard.py'],
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return jsonify({"message": "✅ All services started successfully!"})
     except Exception as e:
@@ -907,14 +925,13 @@ def start_all_services():
 @app.route('/stop-all', methods=['POST'])
 def stop_all_services():
     try:
-        os.system("pkill -f lpr.py")
-        os.system("pkill -f server.js")
-        os.system("pkill -f gps_tracker.py")
-        os.system("pkill -f dashboard.py")
+        os.system("pkill -f /home/lpr2/Desktop/lpr-project/live_detection_service/lpr.py")
+        os.system("pkill -f /home/lpr2/Desktop/lpr-project/live_detection_service/gps_tracker.py")
+        os.system("pkill -f /home/lpr2/Desktop/lpr-project/live_detection_service/server.js")
+        os.system("pkill -f /home/lpr2/Desktop/lpr-project/dashboard_service/dashboard.py")
         return jsonify({"message": "✅ All services stopped successfully!"})
     except Exception as e:
         return jsonify({"message": f"❌ Error stopping services: {e}"}), 500
-
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5001, debug=False)
