@@ -1,16 +1,3 @@
-# lpr.py  — safer public-ready version
-# -*- coding: utf-8 -*-
-"""
-Key changes:
-- 🔐 All secrets/URLs/IPs pulled from environment (.env) instead of hard-coded.
-- 🔐 Optional shared ingest token for /api/gps and /api/receive-plate (X-Auth-Token header).
-- 🔐 Login uses password hashing (fallback to plaintext for legacy rows).
-- 🔐 /start-all and /stop-all protected by admin_required decorator.
-- ✅ Removed verify=False; allow override via env PARKING_VERIFY_SSL=false only if you must.
-- ✅ Reduced PII in logs; masked plates.
-- ✅ Session cookie hardening.
-"""
-
 from __future__ import annotations
 from flask import Flask, render_template, Response, jsonify, request, redirect, url_for, session, send_file
 import platform
