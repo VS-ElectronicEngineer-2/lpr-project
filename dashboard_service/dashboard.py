@@ -1,4 +1,3 @@
-# dashboard.py — sanitized & safer for public repos
 from __future__ import annotations
 from flask import Flask, jsonify, request, render_template, redirect, url_for, session, flash
 from datetime import datetime
